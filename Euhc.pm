@@ -11,7 +11,7 @@ use strict;
 use 5.00503;
 use vars qw($VERSION $_warning);
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.30 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.31 $ =~ m/(\d+)/xmsg;
 
 use Carp qw(carp croak confess cluck verbose);
 use Fcntl;
@@ -117,85 +117,120 @@ sub Euhc::unlink(@);
 #
 sub Euhc::split(;$$$) {
 
-    if (@_ == 0) {
-        return CORE::split;
-    }
-    elsif (@_ == 1) {
-        if ($_[0] eq '') {
-            if (wantarray) {
-                return      m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg;
+    # P.794 split
+    # in Chapter 29: Functions
+    # of ISBN 0-596-00027-8 Programming Perl Third Edition.
+
+    my $pattern = $_[0];
+    my $string  = $_[1];
+    my $limit   = $_[2];
+
+    # if $string is omitted, the function splits the $_ string
+    $string = $_ if not defined $string;
+
+    my @split = ();
+
+    # if $limit is negative, it is treated as if an arbitrarily large $limit has been specified
+    if ((not defined $limit) or ($limit <= 0)) {
+
+        # if $pattern is also omitted or is the literal space, " ", the function splits
+        # on whitespace, /\s+/, after skipping any leading whitespace
+        # (and so on)
+
+        if ((not defined $pattern) or ($pattern eq ' ')) {
+            $string =~ s/ \A \s+ //oxms;
+
+            # the //m modifier is assumed when you split on the pattern /^/
+            # (and so on)
+
+            while ($string =~ s/\A((?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?)\s+//m) {
+
+                # if the $pattern contains parentheses, then the substring matched by each pair of parentheses
+                # is included in the resulting list, interspersed with the fields that are ordinarily returned
+                # (and so on)
+
+                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
+                    push @split, eval '$' . $digit;
+                }
             }
-            else {
-                cluck "$0: Use of implicit split to \@_ is deprecated" if $^W;
-                return @_ = m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg;
+        }
+
+        # a pattern capable of matching either the null string or something longer than the
+        # null string will split the value of $string into separate characters wherever it
+        # matches the null string between characters
+        # (and so on)
+
+        elsif ('' =~ m/ \A $pattern \z /xms) {
+            #                                                                               v--- Look
+            while ($string =~ s/\A((?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])+?)$pattern//m) {
+                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
+                    push @split, eval '$' . $digit;
+                }
+            }
+        }
+
+        else {
+            #                                                                               v--- Look
+            while ($string =~ s/\A((?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?)$pattern//m) {
+                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
+                    push @split, eval '$' . $digit;
+                }
+            }
+        }
+    }
+
+    else {
+        if ((not defined $pattern) or ($pattern eq ' ')) {
+            $string =~ s/ \A \s+ //oxms;
+            while ((--$limit > 0) and (length($string) > 0)) {
+                if ($string =~ s/\A((?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?)\s+//m) {
+                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
+                        push @split, eval '$' . $digit;
+                    }
+                }
+            }
+        }
+        elsif ('' =~ m/ \A $pattern \z /xms) {
+            while ((--$limit > 0) and (length($string) > 0)) {
+                #                                                                            v--- Look
+                if ($string =~ s/\A((?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])+?)$pattern//m) {
+                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
+                        push @split, eval '$' . $digit;
+                    }
+                }
             }
         }
         else {
-            return CORE::split $_[0];
+            while ((--$limit > 0) and (length($string) > 0)) {
+                #                                                                            v--- Look
+                if ($string =~ s/\A((?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*?)$pattern//m) {
+                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
+                        push @split, eval '$' . $digit;
+                    }
+                }
+            }
         }
     }
-    elsif (@_ == 2) {
-        if ($_[0] eq '') {
-            if (wantarray) {
-                return      $_[1] =~ m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg;
-            }
-            else {
-                cluck "$0: Use of implicit split to \@_ is deprecated" if $^W;
-                return @_ = $_[1] =~ m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg;
-            }
-        }
-        else {
-            return CORE::split $_[0], $_[1];
+
+    push @split, $string;
+
+    # if $limit is omitted or zero, trailing null fields are stripped from the result
+    if ((not defined $limit) or ($limit == 0)) {
+        while ($split[-1] eq '') {
+            pop @split;
         }
     }
-    elsif (@_ == 3) {
-        if ($_[0] eq '') {
-            if ($_[2] == 0) {
-                if (wantarray) {
-                    return      $_[1] =~ m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg;
-                }
-                else {
-                    cluck "$0: Use of implicit split to \@_ is deprecated" if $^W;
-                    return @_ = $_[1] =~ m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg;
-                }
-            }
-            elsif ($_[2] == 1) {
-                return $_[1];
-            }
-            else {
-                my @split = $_[1] =~ m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg;
-                if (scalar(@split) < $_[2]) {
-                    if (wantarray) {
-                        return      @split, '';
-                    }
-                    else {
-                        cluck "$0: Use of implicit split to \@_ is deprecated" if $^W;
-                        return @_ = @split, '';
-                    }
-                }
-                elsif (scalar(@split) == $_[2]) {
-                    if (wantarray) {
-                        return      @split;
-                    }
-                    else {
-                        cluck "$0: Use of implicit split to \@_ is deprecated" if $^W;
-                        return @_ = @split;
-                    }
-                }
-                else {
-                    if (wantarray) {
-                        return      @split[0..$_[2]-2], join '', @split[$_[2]-1..$#split];
-                    }
-                    else {
-                        cluck "$0: Use of implicit split to \@_ is deprecated" if $^W;
-                        return @_ = @split[0..$_[2]-2], join '', @split[$_[2]-1..$#split];
-                    }
-                }
-            }
-        }
-        else {
-            return CORE::split $_[0], $_[1], $_[2];
-        }
+
+    # resulting list value in list context
+    if (wantarray) {
+        return @split;
+    }
+
+    # count of substrings in scalar context
+    else {
+        cluck "$0: Use of implicit split to \@_ is deprecated" if $^W;
+        @_ = @split;
+        return scalar @_;
     }
 }
 
@@ -299,10 +334,10 @@ sub Euhc::chop(@) {
         $_ = join '', @char;
     }
     else {
-        for my $string (@_) {
-            my @char = $string =~ m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF]) /oxmsg;
+        for (@_) {
+            my @char = m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF]) /oxmsg;
             $chop = pop @char;
-            $string = join '', @char;
+            $_ = join '', @char;
         }
     }
     return $chop;
@@ -362,13 +397,15 @@ sub Euhc::rindex($$;$) {
 #
 sub Euhc::lc($) {
 
+    local $_ = shift if @_;
+
     my %lc = ();
     @lc{qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)} =
         qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
 
     local $^W = 0;
 
-    return join('', map {$lc{$_}||$_} $_[0] =~ m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg);
+    return join('', map {$lc{$_}||$_} m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF])/oxmsg);
 }
 
 #
@@ -390,13 +427,15 @@ sub Euhc::lc_() {
 #
 sub Euhc::uc($) {
 
+    local $_ = shift if @_;
+
     my %uc = ();
     @uc{qw(a b c d e f g h i j k l m n o p q r s t u v w x y z)} =
         qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
 
     local $^W = 0;
 
-    return join('', map {$uc{$_}||$_} $_[0] =~ m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF]) /oxmsg);
+    return join('', map {$uc{$_}||$_} m/\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF]) /oxmsg);
 }
 
 #
@@ -574,7 +613,7 @@ sub Euhc::ignorecase(@) {
 #
 sub _charlist_tr {
 
-    my(@char) = @_;
+    my @char = @_;
 
     # unescape character
     for (my $i=0; $i <= $#char; $i++) {
@@ -686,6 +725,7 @@ sub _charlist_tr {
 # UHC open character list for qr
 #
 sub _charlist_qr {
+
     my $modifier = pop @_;
     my @char = @_;
 
@@ -925,6 +965,7 @@ sub _charlist_qr {
 # UHC open character list for not qr
 #
 sub _charlist_not_qr {
+
     my $modifier = pop @_;
     my @char = @_;
 
@@ -1163,11 +1204,14 @@ sub _charlist_not_qr {
 # UHC order to character (with parameter)
 #
 sub Euhc::chr($) {
-    if ($_[0] > 0xFF) {
-        return pack 'CC', int($_[0] / 0x100), $_[0] % 0x100;
+
+    local $_ = shift if @_;
+
+    if ($_ > 0xFF) {
+        return pack 'CC', int($_ / 0x100), $_ % 0x100;
     }
     else {
-        return CORE::chr $_[0];
+        return CORE::chr $_;
     }
 }
 
@@ -1175,6 +1219,7 @@ sub Euhc::chr($) {
 # UHC order to character (without parameter)
 #
 sub Euhc::chr_() {
+
     if ($_ > 0xFF) {
         return pack 'CC', int($_ / 0x100), $_ % 0x100;
     }
@@ -1187,12 +1232,15 @@ sub Euhc::chr_() {
 # UHC character to order (with parameter)
 #
 sub Euhc::ord($) {
-    if ($_[0] =~ m/\A [\x81-\xFE] /oxms) {
-        my($ord1,$ord2) = unpack 'CC', $_[0];
+
+    local $_ = shift if @_;
+
+    if (m/\A [\x81-\xFE] /oxms) {
+        my($ord1,$ord2) = unpack 'CC', $_;
         return $ord1 * 0x100 + $ord2;
     }
     else {
-        return CORE::ord $_[0];
+        return CORE::ord $_;
     }
 }
 
@@ -1200,6 +1248,7 @@ sub Euhc::ord($) {
 # UHC character to order (without parameter)
 #
 sub Euhc::ord_() {
+
     if (m/\A [\x81-\xFE] /oxms) {
         my($ord1,$ord2) = unpack 'CC', $_;
         return $ord1 * 0x100 + $ord2;
@@ -1226,6 +1275,7 @@ sub Euhc::reverse(@) {
 # UHC file test -r expr
 #
 sub Euhc::r(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -r (Euhc::r)' if @_ and not wantarray;
 
@@ -1234,6 +1284,7 @@ sub Euhc::r(;*@) {
     }
 
     # P.908 Symbol
+    # in Chapter 32: Standard Modules
     # of ISBN 0-596-00027-8 Programming Perl Third Edition.
     # (and so on)
 
@@ -1263,6 +1314,7 @@ sub Euhc::r(;*@) {
 # UHC file test -w expr
 #
 sub Euhc::w(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -w (Euhc::w)' if @_ and not wantarray;
 
@@ -1295,6 +1347,7 @@ sub Euhc::w(;*@) {
 # UHC file test -x expr
 #
 sub Euhc::x(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -x (Euhc::x)' if @_ and not wantarray;
 
@@ -1329,6 +1382,7 @@ sub Euhc::x(;*@) {
 # UHC file test -o expr
 #
 sub Euhc::o(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -o (Euhc::o)' if @_ and not wantarray;
 
@@ -1361,6 +1415,7 @@ sub Euhc::o(;*@) {
 # UHC file test -R expr
 #
 sub Euhc::R(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -R (Euhc::R)' if @_ and not wantarray;
 
@@ -1393,6 +1448,7 @@ sub Euhc::R(;*@) {
 # UHC file test -W expr
 #
 sub Euhc::W(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -W (Euhc::W)' if @_ and not wantarray;
 
@@ -1425,6 +1481,7 @@ sub Euhc::W(;*@) {
 # UHC file test -X expr
 #
 sub Euhc::X(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -X (Euhc::X)' if @_ and not wantarray;
 
@@ -1459,6 +1516,7 @@ sub Euhc::X(;*@) {
 # UHC file test -O expr
 #
 sub Euhc::O(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -O (Euhc::O)' if @_ and not wantarray;
 
@@ -1491,6 +1549,7 @@ sub Euhc::O(;*@) {
 # UHC file test -e expr
 #
 sub Euhc::e(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -e (Euhc::e)' if @_ and not wantarray;
 
@@ -1531,6 +1590,7 @@ sub Euhc::e(;*@) {
 # UHC file test -z expr
 #
 sub Euhc::z(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -z (Euhc::z)' if @_ and not wantarray;
 
@@ -1563,6 +1623,7 @@ sub Euhc::z(;*@) {
 # UHC file test -s expr
 #
 sub Euhc::s(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -s (Euhc::s)' if @_ and not wantarray;
 
@@ -1595,6 +1656,7 @@ sub Euhc::s(;*@) {
 # UHC file test -f expr
 #
 sub Euhc::f(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -f (Euhc::f)' if @_ and not wantarray;
 
@@ -1627,6 +1689,7 @@ sub Euhc::f(;*@) {
 # UHC file test -d expr
 #
 sub Euhc::d(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -d (Euhc::d)' if @_ and not wantarray;
 
@@ -1651,6 +1714,7 @@ sub Euhc::d(;*@) {
 # UHC file test -l expr
 #
 sub Euhc::l(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -l (Euhc::l)' if @_ and not wantarray;
 
@@ -1683,6 +1747,7 @@ sub Euhc::l(;*@) {
 # UHC file test -p expr
 #
 sub Euhc::p(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -p (Euhc::p)' if @_ and not wantarray;
 
@@ -1715,6 +1780,7 @@ sub Euhc::p(;*@) {
 # UHC file test -S expr
 #
 sub Euhc::S(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -S (Euhc::S)' if @_ and not wantarray;
 
@@ -1747,6 +1813,7 @@ sub Euhc::S(;*@) {
 # UHC file test -b expr
 #
 sub Euhc::b(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -b (Euhc::b)' if @_ and not wantarray;
 
@@ -1779,6 +1846,7 @@ sub Euhc::b(;*@) {
 # UHC file test -c expr
 #
 sub Euhc::c(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -c (Euhc::c)' if @_ and not wantarray;
 
@@ -1811,6 +1879,7 @@ sub Euhc::c(;*@) {
 # UHC file test -t expr
 #
 sub Euhc::t(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -t (Euhc::t)' if @_ and not wantarray;
 
@@ -1843,6 +1912,7 @@ sub Euhc::t(;*@) {
 # UHC file test -u expr
 #
 sub Euhc::u(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -u (Euhc::u)' if @_ and not wantarray;
 
@@ -1875,6 +1945,7 @@ sub Euhc::u(;*@) {
 # UHC file test -g expr
 #
 sub Euhc::g(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -g (Euhc::g)' if @_ and not wantarray;
 
@@ -1907,6 +1978,7 @@ sub Euhc::g(;*@) {
 # UHC file test -k expr
 #
 sub Euhc::k(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -k (Euhc::k)' if @_ and not wantarray;
 
@@ -1939,6 +2011,7 @@ sub Euhc::k(;*@) {
 # UHC file test -T expr
 #
 sub Euhc::T(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -T (Euhc::T)' if @_ and not wantarray;
     my $T = 1;
@@ -1950,6 +2023,7 @@ sub Euhc::T(;*@) {
         }
 
         # P.813 tell
+        # in Chapter 29: Functions
         # of ISBN 0-596-00027-8 Programming Perl Third Edition.
         # (and so on)
 
@@ -2009,6 +2083,7 @@ sub Euhc::T(;*@) {
 # UHC file test -B expr
 #
 sub Euhc::B(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -B (Euhc::B)' if @_ and not wantarray;
     my $B = '';
@@ -2070,6 +2145,7 @@ sub Euhc::B(;*@) {
 # UHC file test -M expr
 #
 sub Euhc::M(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -M (Euhc::M)' if @_ and not wantarray;
 
@@ -2103,6 +2179,7 @@ sub Euhc::M(;*@) {
 # UHC file test -A expr
 #
 sub Euhc::A(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -A (Euhc::A)' if @_ and not wantarray;
 
@@ -2136,6 +2213,7 @@ sub Euhc::A(;*@) {
 # UHC file test -C expr
 #
 sub Euhc::C(;*@) {
+
     local $_ = shift if @_;
     croak 'Too many arguments for -C (Euhc::C)' if @_ and not wantarray;
 
@@ -2169,22 +2247,20 @@ sub Euhc::C(;*@) {
 # UHC file test -r $_
 #
 sub Euhc::r_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -r _ ? $true : $false;
+        return -r _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -r _ ? $true : $false;
+            return -r _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $r = -r $fh;
                 close $fh;
-                return $r ? $true : $false;
+                return $r ? 1 : '';
             }
         }
     }
@@ -2195,22 +2271,20 @@ sub Euhc::r_() {
 # UHC file test -w $_
 #
 sub Euhc::w_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -w _ ? $true : $false;
+        return -w _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -w _ ? $true : $false;
+            return -w _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_WRONLY|O_APPEND) {
                 my $w = -w $fh;
                 close $fh;
-                return $w ? $true : $false;
+                return $w ? 1 : '';
             }
         }
     }
@@ -2221,15 +2295,13 @@ sub Euhc::w_() {
 # UHC file test -x $_
 #
 sub Euhc::x_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -x _ ? $true : $false;
+        return -x _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -x _ ? $true : $false;
+            return -x _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
@@ -2239,7 +2311,7 @@ sub Euhc::x_() {
             }
 
             # filename is not .COM .EXE .BAT .CMD
-            return $false;
+            return '';
         }
     }
     return;
@@ -2249,22 +2321,20 @@ sub Euhc::x_() {
 # UHC file test -o $_
 #
 sub Euhc::o_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -o _ ? $true : $false;
+        return -o _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -o _ ? $true : $false;
+            return -o _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $o = -o $fh;
                 close $fh;
-                return $o ? $true : $false;
+                return $o ? 1 : '';
             }
         }
     }
@@ -2275,22 +2345,20 @@ sub Euhc::o_() {
 # UHC file test -R $_
 #
 sub Euhc::R_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -R _ ? $true : $false;
+        return -R _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -R _ ? $true : $false;
+            return -R _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $R = -R $fh;
                 close $fh;
-                return $R ? $true : $false;
+                return $R ? 1 : '';
             }
         }
     }
@@ -2301,22 +2369,20 @@ sub Euhc::R_() {
 # UHC file test -W $_
 #
 sub Euhc::W_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -W _ ? $true : $false;
+        return -W _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -W _ ? $true : $false;
+            return -W _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_WRONLY|O_APPEND) {
                 my $W = -W $fh;
                 close $fh;
-                return $W ? $true : $false;
+                return $W ? 1 : '';
             }
         }
     }
@@ -2327,15 +2393,13 @@ sub Euhc::W_() {
 # UHC file test -X $_
 #
 sub Euhc::X_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -X _ ? $true : $false;
+        return -X _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -X _ ? $true : $false;
+            return -X _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
@@ -2345,7 +2409,7 @@ sub Euhc::X_() {
             }
 
             # filename is not .COM .EXE .BAT .CMD
-            return $false;
+            return '';
         }
     }
     return;
@@ -2355,22 +2419,20 @@ sub Euhc::X_() {
 # UHC file test -O $_
 #
 sub Euhc::O_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -O _ ? $true : $false;
+        return -O _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -O _ ? $true : $false;
+            return -O _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $O = -O $fh;
                 close $fh;
-                return $O ? $true : $false;
+                return $O ? 1 : '';
             }
         }
     }
@@ -2381,22 +2443,20 @@ sub Euhc::O_() {
 # UHC file test -e $_
 #
 sub Euhc::e_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return $true;
+        return 1;
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return $true;
+            return 1;
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $e = -e $fh;
                 close $fh;
-                return $e ? $true : $false;
+                return $e ? 1 : '';
             }
         }
     }
@@ -2407,22 +2467,20 @@ sub Euhc::e_() {
 # UHC file test -z $_
 #
 sub Euhc::z_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -z _ ? $true : $false;
+        return -z _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -z _ ? $true : $false;
+            return -z _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $z = -z $fh;
                 close $fh;
-                return $z ? $true : $false;
+                return $z ? 1 : '';
             }
         }
     }
@@ -2433,6 +2491,7 @@ sub Euhc::z_() {
 # UHC file test -s $_
 #
 sub Euhc::s_() {
+
     if (-e $_) {
         return -s _;
     }
@@ -2456,22 +2515,20 @@ sub Euhc::s_() {
 # UHC file test -f $_
 #
 sub Euhc::f_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -f _ ? $true : $false;
+        return -f _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return $false;
+            return '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $f = -f $fh;
                 close $fh;
-                return $f ? $true : $false;
+                return $f ? 1 : '';
             }
         }
     }
@@ -2482,14 +2539,12 @@ sub Euhc::f_() {
 # UHC file test -d $_
 #
 sub Euhc::d_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -d _ ? $true : $false;
+        return -d _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        return -d "$_/" ? $true : $false;
+        return -d "$_/" ? 1 : '';
     }
     return;
 }
@@ -2498,22 +2553,20 @@ sub Euhc::d_() {
 # UHC file test -l $_
 #
 sub Euhc::l_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -l _ ? $true : $false;
+        return -l _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -l _ ? $true : $false;
+            return -l _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $l = -l $fh;
                 close $fh;
-                return $l ? $true : $false;
+                return $l ? 1 : '';
             }
         }
     }
@@ -2524,22 +2577,20 @@ sub Euhc::l_() {
 # UHC file test -p $_
 #
 sub Euhc::p_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -p _ ? $true : $false;
+        return -p _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -p _ ? $true : $false;
+            return -p _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $p = -p $fh;
                 close $fh;
-                return $p ? $true : $false;
+                return $p ? 1 : '';
             }
         }
     }
@@ -2550,22 +2601,20 @@ sub Euhc::p_() {
 # UHC file test -S $_
 #
 sub Euhc::S_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -S _ ? $true : $false;
+        return -S _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -S _ ? $true : $false;
+            return -S _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $S = -S $fh;
                 close $fh;
-                return $S ? $true : $false;
+                return $S ? 1 : '';
             }
         }
     }
@@ -2576,22 +2625,20 @@ sub Euhc::S_() {
 # UHC file test -b $_
 #
 sub Euhc::b_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -b _ ? $true : $false;
+        return -b _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -b _ ? $true : $false;
+            return -b _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $b = -b $fh;
                 close $fh;
-                return $b ? $true : $false;
+                return $b ? 1 : '';
             }
         }
     }
@@ -2602,22 +2649,20 @@ sub Euhc::b_() {
 # UHC file test -c $_
 #
 sub Euhc::c_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -c _ ? $true : $false;
+        return -c _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -c _ ? $true : $false;
+            return -c _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $c = -c $fh;
                 close $fh;
-                return $c ? $true : $false;
+                return $c ? 1 : '';
             }
         }
     }
@@ -2628,32 +2673,28 @@ sub Euhc::c_() {
 # UHC file test -t $_
 #
 sub Euhc::t_() {
-    my $true  = 1;
-    my $false = '';
 
-    return -t STDIN ? $true : $false;
+    return -t STDIN ? 1 : '';
 }
 
 #
 # UHC file test -u $_
 #
 sub Euhc::u_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -u _ ? $true : $false;
+        return -u _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -u _ ? $true : $false;
+            return -u _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $u = -u $fh;
                 close $fh;
-                return $u ? $true : $false;
+                return $u ? 1 : '';
             }
         }
     }
@@ -2664,22 +2705,20 @@ sub Euhc::u_() {
 # UHC file test -g $_
 #
 sub Euhc::g_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -g _ ? $true : $false;
+        return -g _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -g _ ? $true : $false;
+            return -g _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $g = -g $fh;
                 close $fh;
-                return $g ? $true : $false;
+                return $g ? 1 : '';
             }
         }
     }
@@ -2690,22 +2729,20 @@ sub Euhc::g_() {
 # UHC file test -k $_
 #
 sub Euhc::k_() {
-    my $true  = 1;
-    my $false = '';
 
     if (-e $_) {
-        return -k _ ? $true : $false;
+        return -k _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
         if (-d "$_/") {
-            return -k _ ? $true : $false;
+            return -k _ ? 1 : '';
         }
         else {
             my $fh = Symbol::gensym();
             if (sysopen $fh, $_, O_RDONLY) {
                 my $k = -k $fh;
                 close $fh;
-                return $k ? $true : $false;
+                return $k ? 1 : '';
             }
         }
     }
@@ -2716,9 +2753,8 @@ sub Euhc::k_() {
 # UHC file test -T $_
 #
 sub Euhc::T_() {
-    my $true  = 1;
-    my $false = '';
-    my $T     = $true;
+
+    my $T = 1;
 
     if (-d $_ or -d "$_/") {
         return;
@@ -2730,16 +2766,16 @@ sub Euhc::T_() {
 
     if (sysread $fh, my $block, 512) {
         if ($block =~ /[\000\377]/oxms) {
-            $T = $false;
+            $T = '';
         }
         elsif (($block =~ tr/\000-\007\013\016-\032\034-\037\377//) * 10 > length $block) {
-            $T = $false;
+            $T = '';
         }
     }
 
     # 0 byte or eof
     else {
-        $T = $true;
+        $T = 1;
     }
     close $fh;
 
@@ -2751,9 +2787,8 @@ sub Euhc::T_() {
 # UHC file test -B $_
 #
 sub Euhc::B_() {
-    my $true  = 1;
-    my $false = '';
-    my $B     = $false;
+
+    my $B = '';
 
     if (-d $_ or -d "$_/") {
         return;
@@ -2765,16 +2800,16 @@ sub Euhc::B_() {
 
     if (sysread $fh, my $block, 512) {
         if ($block =~ /[\000\377]/oxms) {
-            $B = $true;
+            $B = 1;
         }
         elsif (($block =~ tr/\000-\007\013\016-\032\034-\037\377//) * 10 > length $block) {
-            $B = $true;
+            $B = 1;
         }
     }
 
     # 0 byte or eof
     else {
-        $B = $true;
+        $B = 1;
     }
     close $fh;
 
@@ -2786,6 +2821,7 @@ sub Euhc::B_() {
 # UHC file test -M $_
 #
 sub Euhc::M_() {
+
     if (-e $_) {
         return -M _;
     }
@@ -2810,6 +2846,7 @@ sub Euhc::M_() {
 # UHC file test -A $_
 #
 sub Euhc::A_() {
+
     if (-e $_) {
         return -A _;
     }
@@ -2834,6 +2871,7 @@ sub Euhc::A_() {
 # UHC file test -C $_
 #
 sub Euhc::C_() {
+
     if (-e $_) {
         return -C _;
     }
@@ -2858,6 +2896,7 @@ sub Euhc::C_() {
 # UHC path globbing (with parameter)
 #
 sub Euhc::glob($) {
+
     if ($^O =~ /\A (?:MSWin32|NetWare|symbian|dos) \z/oxms) {
         return _dosglob(@_);
     }
@@ -2870,6 +2909,7 @@ sub Euhc::glob($) {
 # UHC path globbing (without parameter)
 #
 sub Euhc::glob_() {
+
     if ($^O =~ /\A (?:MSWin32|NetWare|symbian|dos) \z/oxms) {
         return _dosglob();
     }
@@ -2933,6 +2973,7 @@ sub _dosglob {
 # UHC path globbing subroutine
 #
 sub _do_glob {
+
     my($cond,@expr) = @_;
     my @glob = ();
 
@@ -3095,6 +3136,7 @@ INNER:
 # UHC parse line
 #
 sub _parse_line {
+
     my($line) = @_;
 
     $line .= ' ';
@@ -3113,6 +3155,7 @@ sub _parse_line {
 # UHC parse path
 #
 sub _parse_path {
+
     my($path,$pathsep) = @_;
 
     $path .= '/';
@@ -3131,16 +3174,19 @@ sub _parse_path {
 # UHC file lstat (with parameter)
 #
 sub Euhc::lstat(*) {
-    my $fh = Symbol::qualify_to_ref $_[0];
+
+    local $_ = shift if @_;
+
+    my $fh = Symbol::qualify_to_ref $_;
     if (fileno $fh) {
         return CORE::lstat $fh;
     }
-    elsif (-e $_[0]) {
+    elsif (-e $_) {
         return CORE::lstat _;
     }
-    elsif (_MSWin32_5Cended_path($_[0])) {
+    elsif (_MSWin32_5Cended_path($_)) {
         my $fh = Symbol::gensym();
-        if (sysopen $fh, $_[0], O_RDONLY) {
+        if (sysopen $fh, $_, O_RDONLY) {
             my @lstat = CORE::lstat $fh;
             close $fh;
             return @lstat;
@@ -3153,6 +3199,7 @@ sub Euhc::lstat(*) {
 # UHC file lstat (without parameter)
 #
 sub Euhc::lstat_() {
+
     my $fh = Symbol::qualify_to_ref $_;
     if (fileno $fh) {
         return CORE::lstat $fh;
@@ -3196,16 +3243,19 @@ sub Euhc::opendir(*$) {
 # UHC file stat (with parameter)
 #
 sub Euhc::stat(*) {
-    my $fh = Symbol::qualify_to_ref $_[0];
+
+    local $_ = shift if @_;
+
+    my $fh = Symbol::qualify_to_ref $_;
     if (fileno $fh) {
         return CORE::stat $fh;
     }
-    elsif (-e $_[0]) {
+    elsif (-e $_) {
         return CORE::stat _;
     }
-    elsif (_MSWin32_5Cended_path($_[0])) {
+    elsif (_MSWin32_5Cended_path($_)) {
         my $fh = Symbol::gensym();
-        if (sysopen $fh, $_[0], O_RDONLY) {
+        if (sysopen $fh, $_, O_RDONLY) {
             my @stat = CORE::stat $fh;
             close $fh;
             return @stat;
@@ -3218,6 +3268,7 @@ sub Euhc::stat(*) {
 # UHC file stat (without parameter)
 #
 sub Euhc::stat_() {
+
     my $fh = Symbol::qualify_to_ref $_;
     if (fileno $fh) {
         return CORE::stat $fh;
@@ -3240,9 +3291,13 @@ sub Euhc::stat_() {
 # UHC path unlink
 #
 sub Euhc::unlink(@) {
-    if (@_ == 0) {
+
+    local @_ = ($_) unless @_;
+
+    my $unlink = 0;
+    for (@_) {
         if (CORE::unlink) {
-            return 1;
+            $unlink++;
         }
         elsif (_MSWin32_5Cended_path($_)) {
             my @char = /\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF]) /oxmsg;
@@ -3256,41 +3311,18 @@ sub Euhc::unlink(@) {
                 close $fh;
             }
             else {
-                return 1;
-            }
-        }
-        return 0;
-    }
-    else {
-        my $unlink = 0;
-        for (@_) {
-            if (CORE::unlink) {
                 $unlink++;
             }
-            elsif (_MSWin32_5Cended_path($_)) {
-                my @char = /\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF]) /oxmsg;
-                my $file = join '', map {{'/' => '\\'}->{$_} || $_} @char;
-                if ($file =~ m/ \A (?:[\x81-\xFE][\x00-\xFF]|[^\x81-\xFE])*? [ ] /oxms) {
-                    $file = qq{"$file"};
-                }
-                system(qq{del $file >NUL 2>NUL});
-                my $fh = Symbol::gensym();
-                if (sysopen $fh, $_, O_RDONLY) {
-                    close $fh;
-                }
-                else {
-                    $unlink++;
-                }
-            }
         }
-        return $unlink;
     }
+    return $unlink;
 }
 
 #
 # UHC chr(0x5C) ended path on MSWin32
 #
 sub _MSWin32_5Cended_path {
+
     if ((@_ >= 1) and ($_[0] ne '')) {
         if ($^O =~ /\A (?:MSWin32|NetWare|symbian|dos) \z/oxms) {
             my @char = $_[0] =~ /\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF]) /oxmsg;
@@ -3350,8 +3382,8 @@ Euhc - Run-time routines for UHC.pm
 
 =head1 ABSTRACT
 
-It output "use Euhc;" automatically when UHC.pm converts your script.
-So you need not use this module directly.
+This module is a run-time routines of the UHC module.
+Because the UHC module automatically uses this module, you need not use directly.
 
 =head1 BUGS AND LIMITATIONS
 
