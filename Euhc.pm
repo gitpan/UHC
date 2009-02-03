@@ -11,7 +11,7 @@ use strict;
 use 5.00503;
 use vars qw($VERSION $_warning);
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.31 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.32 $ =~ m/(\d+)/xmsg;
 
 use Carp qw(carp croak confess cluck verbose);
 use Fcntl;
@@ -111,6 +111,26 @@ sub Euhc::opendir(*$);
 sub Euhc::stat(*);
 sub Euhc::stat_();
 sub Euhc::unlink(@);
+sub Euhc::chdir(;$);
+
+# @ARGV wildcard globbing
+if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
+    if ($ENV{'ComSpec'} =~ / (?: COMMAND\.COM | CMD\.EXE ) \z /oxmsi) {
+        my @argv = ();
+        for (@ARGV) {
+            if (m/\A ' ((?:[\x81-\xFE][\x00-\xFF] | [^\x81-\xFE])*) ' \z/oxms) {
+                push @argv, $1;
+            }
+            elsif (my @glob = Euhc::glob($_)) {
+                push @argv, @glob;
+            }
+            else {
+                push @argv, $_;
+            }
+        }
+        @ARGV = @argv;
+    }
+}
 
 #
 # UHC split
@@ -1295,7 +1315,7 @@ sub Euhc::r(;*@) {
         return wantarray ? (-r _,@_) : -r _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-r _,@_) : -r _;
         }
         else {
@@ -1328,7 +1348,7 @@ sub Euhc::w(;*@) {
         return wantarray ? (-w _,@_) : -w _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-w _,@_) : -w _;
         }
         else {
@@ -1361,7 +1381,7 @@ sub Euhc::x(;*@) {
         return wantarray ? (-x _,@_) : -x _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-x _,@_) : -x _;
         }
         else {
@@ -1396,7 +1416,7 @@ sub Euhc::o(;*@) {
         return wantarray ? (-o _,@_) : -o _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-o _,@_) : -o _;
         }
         else {
@@ -1429,7 +1449,7 @@ sub Euhc::R(;*@) {
         return wantarray ? (-R _,@_) : -R _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-R _,@_) : -R _;
         }
         else {
@@ -1462,7 +1482,7 @@ sub Euhc::W(;*@) {
         return wantarray ? (-W _,@_) : -W _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-W _,@_) : -W _;
         }
         else {
@@ -1495,7 +1515,7 @@ sub Euhc::X(;*@) {
         return wantarray ? (-X _,@_) : -X _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-X _,@_) : -X _;
         }
         else {
@@ -1530,7 +1550,7 @@ sub Euhc::O(;*@) {
         return wantarray ? (-O _,@_) : -O _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-O _,@_) : -O _;
         }
         else {
@@ -1553,6 +1573,8 @@ sub Euhc::e(;*@) {
     local $_ = shift if @_;
     croak 'Too many arguments for -e (Euhc::e)' if @_ and not wantarray;
 
+    local $^W = 0;
+
     if ($_ eq '_') {
         return wantarray ? (-e _,@_) : -e _;
     }
@@ -1571,7 +1593,7 @@ sub Euhc::e(;*@) {
         return wantarray ? (1,@_) : 1;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (1,@_) : 1;
         }
         else {
@@ -1604,7 +1626,7 @@ sub Euhc::z(;*@) {
         return wantarray ? (-z _,@_) : -z _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-z _,@_) : -z _;
         }
         else {
@@ -1637,7 +1659,7 @@ sub Euhc::s(;*@) {
         return wantarray ? (-s _,@_) : -s _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-s _,@_) : -s _;
         }
         else {
@@ -1670,7 +1692,7 @@ sub Euhc::f(;*@) {
         return wantarray ? (-f _,@_) : -f _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? ('',@_) : '';
         }
         else {
@@ -1705,7 +1727,7 @@ sub Euhc::d(;*@) {
         return wantarray ? (-d _,@_) : -d _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        return wantarray ? (-d "$_/",@_) : -d "$_/";
+        return wantarray ? (-d "$_/.",@_) : -d "$_/.";
     }
     return wantarray ? (undef,@_) : undef;
 }
@@ -1728,7 +1750,7 @@ sub Euhc::l(;*@) {
         return wantarray ? (-l _,@_) : -l _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-l _,@_) : -l _;
         }
         else {
@@ -1761,7 +1783,7 @@ sub Euhc::p(;*@) {
         return wantarray ? (-p _,@_) : -p _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-p _,@_) : -p _;
         }
         else {
@@ -1794,7 +1816,7 @@ sub Euhc::S(;*@) {
         return wantarray ? (-S _,@_) : -S _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-S _,@_) : -S _;
         }
         else {
@@ -1827,7 +1849,7 @@ sub Euhc::b(;*@) {
         return wantarray ? (-b _,@_) : -b _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-b _,@_) : -b _;
         }
         else {
@@ -1860,7 +1882,7 @@ sub Euhc::c(;*@) {
         return wantarray ? (-c _,@_) : -c _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-c _,@_) : -c _;
         }
         else {
@@ -1893,7 +1915,7 @@ sub Euhc::t(;*@) {
         return wantarray ? (-t _,@_) : -t _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? ('',@_) : '';
         }
         else {
@@ -1926,7 +1948,7 @@ sub Euhc::u(;*@) {
         return wantarray ? (-u _,@_) : -u _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-u _,@_) : -u _;
         }
         else {
@@ -1959,7 +1981,7 @@ sub Euhc::g(;*@) {
         return wantarray ? (-g _,@_) : -g _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-g _,@_) : -g _;
         }
         else {
@@ -1992,7 +2014,7 @@ sub Euhc::k(;*@) {
         return wantarray ? (-k _,@_) : -k _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-k _,@_) : -k _;
         }
         else {
@@ -2018,6 +2040,7 @@ sub Euhc::T(;*@) {
 
     my $fh = Symbol::qualify_to_ref $_;
     if (fileno $fh) {
+        local $^W = 0;
         if (defined telldir $fh) {
             return wantarray ? (undef,@_) : undef;
         }
@@ -2051,7 +2074,7 @@ sub Euhc::T(;*@) {
         sysseek $fh, $systell, 0;
     }
     else {
-        if (-d $_ or -d "$_/") {
+        if (-d $_ or -d "$_/.") {
             return wantarray ? (undef,@_) : undef;
         }
 
@@ -2090,6 +2113,7 @@ sub Euhc::B(;*@) {
 
     my $fh = Symbol::qualify_to_ref $_;
     if (fileno $fh) {
+        local $^W = 0;
         if (defined telldir $fh) {
             return wantarray ? (undef,@_) : undef;
         }
@@ -2113,7 +2137,7 @@ sub Euhc::B(;*@) {
         sysseek $fh, $systell, 0;
     }
     else {
-        if (-d $_ or -d "$_/") {
+        if (-d $_ or -d "$_/.") {
             return wantarray ? (undef,@_) : undef;
         }
 
@@ -2159,7 +2183,7 @@ sub Euhc::M(;*@) {
         return wantarray ? (-M _,@_) : -M _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-M _,@_) : -M _;
         }
         else {
@@ -2193,7 +2217,7 @@ sub Euhc::A(;*@) {
         return wantarray ? (-A _,@_) : -A _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-A _,@_) : -A _;
         }
         else {
@@ -2227,7 +2251,7 @@ sub Euhc::C(;*@) {
         return wantarray ? (-C _,@_) : -C _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return wantarray ? (-C _,@_) : -C _;
         }
         else {
@@ -2252,7 +2276,7 @@ sub Euhc::r_() {
         return -r _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -r _ ? 1 : '';
         }
         else {
@@ -2276,7 +2300,7 @@ sub Euhc::w_() {
         return -w _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -w _ ? 1 : '';
         }
         else {
@@ -2300,7 +2324,7 @@ sub Euhc::x_() {
         return -x _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -x _ ? 1 : '';
         }
         else {
@@ -2326,7 +2350,7 @@ sub Euhc::o_() {
         return -o _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -o _ ? 1 : '';
         }
         else {
@@ -2350,7 +2374,7 @@ sub Euhc::R_() {
         return -R _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -R _ ? 1 : '';
         }
         else {
@@ -2374,7 +2398,7 @@ sub Euhc::W_() {
         return -W _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -W _ ? 1 : '';
         }
         else {
@@ -2398,7 +2422,7 @@ sub Euhc::X_() {
         return -X _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -X _ ? 1 : '';
         }
         else {
@@ -2424,7 +2448,7 @@ sub Euhc::O_() {
         return -O _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -O _ ? 1 : '';
         }
         else {
@@ -2448,7 +2472,7 @@ sub Euhc::e_() {
         return 1;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return 1;
         }
         else {
@@ -2472,7 +2496,7 @@ sub Euhc::z_() {
         return -z _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -z _ ? 1 : '';
         }
         else {
@@ -2496,7 +2520,7 @@ sub Euhc::s_() {
         return -s _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -s _;
         }
         else {
@@ -2520,7 +2544,7 @@ sub Euhc::f_() {
         return -f _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return '';
         }
         else {
@@ -2544,7 +2568,7 @@ sub Euhc::d_() {
         return -d _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        return -d "$_/" ? 1 : '';
+        return -d "$_/." ? 1 : '';
     }
     return;
 }
@@ -2558,7 +2582,7 @@ sub Euhc::l_() {
         return -l _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -l _ ? 1 : '';
         }
         else {
@@ -2582,7 +2606,7 @@ sub Euhc::p_() {
         return -p _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -p _ ? 1 : '';
         }
         else {
@@ -2606,7 +2630,7 @@ sub Euhc::S_() {
         return -S _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -S _ ? 1 : '';
         }
         else {
@@ -2630,7 +2654,7 @@ sub Euhc::b_() {
         return -b _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -b _ ? 1 : '';
         }
         else {
@@ -2654,7 +2678,7 @@ sub Euhc::c_() {
         return -c _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -c _ ? 1 : '';
         }
         else {
@@ -2686,7 +2710,7 @@ sub Euhc::u_() {
         return -u _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -u _ ? 1 : '';
         }
         else {
@@ -2710,7 +2734,7 @@ sub Euhc::g_() {
         return -g _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -g _ ? 1 : '';
         }
         else {
@@ -2734,7 +2758,7 @@ sub Euhc::k_() {
         return -k _ ? 1 : '';
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -k _ ? 1 : '';
         }
         else {
@@ -2756,7 +2780,7 @@ sub Euhc::T_() {
 
     my $T = 1;
 
-    if (-d $_ or -d "$_/") {
+    if (-d $_ or -d "$_/.") {
         return;
     }
     my $fh = Symbol::gensym();
@@ -2790,7 +2814,7 @@ sub Euhc::B_() {
 
     my $B = '';
 
-    if (-d $_ or -d "$_/") {
+    if (-d $_ or -d "$_/.") {
         return;
     }
     my $fh = Symbol::gensym();
@@ -2826,7 +2850,7 @@ sub Euhc::M_() {
         return -M _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -M _;
         }
         else {
@@ -2851,7 +2875,7 @@ sub Euhc::A_() {
         return -A _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -A _;
         }
         else {
@@ -2876,7 +2900,7 @@ sub Euhc::C_() {
         return -C _;
     }
     elsif (_MSWin32_5Cended_path($_)) {
-        if (-d "$_/") {
+        if (-d "$_/.") {
             return -C _;
         }
         else {
@@ -2897,11 +2921,11 @@ sub Euhc::C_() {
 #
 sub Euhc::glob($) {
 
-    if ($^O =~ /\A (?:MSWin32|NetWare|symbian|dos) \z/oxms) {
+    if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
         return _dosglob(@_);
     }
     else {
-        return glob @_;
+        return CORE::glob @_;
     }
 }
 
@@ -2910,11 +2934,11 @@ sub Euhc::glob($) {
 #
 sub Euhc::glob_() {
 
-    if ($^O =~ /\A (?:MSWin32|NetWare|symbian|dos) \z/oxms) {
+    if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
         return _dosglob();
     }
     else {
-        return glob;
+        return CORE::glob;
     }
 }
 
@@ -2989,7 +3013,7 @@ OUTER:
         my $tail;
 
         # if argument is within quotes strip em and do no globbing
-        if ($expr =~ m/\A " (.*) " \z/oxms) {
+        if ($expr =~ m/\A " ((?:[\x81-\xFE][\x00-\xFF] | [^\x81-\xFE])*) " \z/oxms) {
             $expr = $1;
             if ($cond eq 'd') {
                 if (Euhc::d $expr) {
@@ -3006,7 +3030,7 @@ OUTER:
 
         # wildcards with a drive prefix such as h:*.pm must be changed
         # to h:./*.pm to expand correctly
-        $expr =~ s# \A ([A-Za-z]:) ([\x81-\xFE][\x00-\xFF]|[^/\\]) #$1./$2#oxms;
+        $expr =~ s# \A ((?:[A-Za-z]:)?) ([\x81-\xFE][\x00-\xFF]|[^/\\]) #$1./$2#oxms;
 
         if (($head, $tail) = _parse_path($expr,$pathsep)) {
             if ($tail eq '') {
@@ -3232,7 +3256,7 @@ sub Euhc::opendir(*$) {
         return 1;
     }
     elsif (_MSWin32_5Cended_path($_[1])) {
-        if (CORE::opendir $dh, "$_[1]/") {
+        if (CORE::opendir $dh, "$_[1]/.") {
             return 1;
         }
     }
@@ -3319,12 +3343,33 @@ sub Euhc::unlink(@) {
 }
 
 #
+# UHC chdir
+#
+sub Euhc::chdir(;$) {
+
+    my($dir) = @_;
+
+    if (not defined $dir) {
+        $dir = ($ENV{'HOME'} || $ENV{'USERPROFILE'} || "$ENV{'HOMEDRIVE'}$ENV{'HOMEPATH'}");
+    }
+    if (_MSWin32_5Cended_path($dir)) {
+        if (Euhc::d $dir) {
+            croak "Can't chdir $dir";
+        }
+        return 0;
+    }
+    else {
+        return CORE::chdir $dir;
+    }
+}
+
+#
 # UHC chr(0x5C) ended path on MSWin32
 #
 sub _MSWin32_5Cended_path {
 
     if ((@_ >= 1) and ($_[0] ne '')) {
-        if ($^O =~ /\A (?:MSWin32|NetWare|symbian|dos) \z/oxms) {
+        if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
             my @char = $_[0] =~ /\G ([\x81-\xFE][\x00-\xFF] | [\x00-\xFF]) /oxmsg;
             if ($char[-1] =~ m/\A [\x81-\xFE][\x5C] \z/oxms) {
                 return 1;
@@ -3377,6 +3422,7 @@ Euhc - Run-time routines for UHC.pm
     Euhc::stat(...);
     Euhc::stat_;
     Euhc::unlink(...);
+    Euhc::chdir(...);
 
   # "no Euhc;" not supported
 
@@ -3723,6 +3769,17 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   unlinks the file given in $_. The function returns the number of files
   successfully deleted.
   This function function when the filename ends with chr(0x5C) on MSWin32.
+
+=item Changes the working directory.
+
+  $chdir = Euhc::chdir($dirname);
+  $chdir = Euhc::chdir;
+
+  Changes the working directory to $dirname, if possible. If $dirname is omitted,
+  it changes to the home directory. The function returns 1 upon success, 0
+  otherwise (and puts the error code into $!).
+
+  This function can't function when the $dirname ends with chr(0x5C) on MSWin32.
 
 =back
 
