@@ -9,9 +9,9 @@ package Euhc;
 
 use strict;
 use 5.00503;
-use vars qw($VERSION $_warning);
+use vars qw($VERSION $_warning $last_s_matched);
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.40 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.41 $ =~ m/(\d+)/xmsg;
 
 use Fcntl;
 use Symbol;
@@ -142,21 +142,18 @@ else {
 sub import() {}
 sub unimport() {}
 sub Euhc::split(;$$$);
-sub Euhc::tr($$$;$);
+sub Euhc::tr($$$$;$);
 sub Euhc::chop(@);
 sub Euhc::index($$;$);
 sub Euhc::rindex($$;$);
-sub Euhc::lc($);
+sub Euhc::lc(@);
 sub Euhc::lc_();
-sub Euhc::uc($);
+sub Euhc::uc(@);
 sub Euhc::uc_();
-sub Euhc::shift_matched_var();
+sub Euhc::capture($);
 sub Euhc::ignorecase(@);
-sub Euhc::chr($);
+sub Euhc::chr(;$);
 sub Euhc::chr_();
-sub Euhc::ord($);
-sub Euhc::ord_();
-sub Euhc::reverse(@);
 sub Euhc::r(;*@);
 sub Euhc::w(;*@);
 sub Euhc::x(;*@);
@@ -223,7 +220,10 @@ sub Euhc::chdir(;$);
 sub Euhc::do($);
 sub Euhc::require(;$);
 
-sub UHC::length;
+sub UHC::ord(;$);
+sub UHC::ord_();
+sub UHC::reverse(@);
+sub UHC::length(;$);
 sub UHC::substr($$;$$);
 sub UHC::index($$;$);
 sub UHC::rindex($$;$);
@@ -430,11 +430,12 @@ sub Euhc::split(;$$$) {
 #
 # UHC transliteration (tr///)
 #
-sub Euhc::tr($$$;$) {
+sub Euhc::tr($$$$;$) {
 
-    my $searchlist      = $_[1];
-    my $replacementlist = $_[2];
-    my $modifier        = $_[3] || '';
+    my $bind_operator   = $_[1];
+    my $searchlist      = $_[2];
+    my $replacementlist = $_[3];
+    my $modifier        = $_[4] || '';
 
     my @char            = $_[0] =~ m/\G ($q_char) /oxmsg;
     my @searchlist      = _charlist_tr($searchlist);
@@ -496,7 +497,13 @@ sub Euhc::tr($$$;$) {
             }
         }
     }
-    return $tr;
+
+    if ($bind_operator =~ m/ !~ /oxms) {
+        return not $tr;
+    }
+    else {
+        return $tr;
+    }
 }
 
 #
@@ -506,7 +513,7 @@ sub Euhc::chop(@) {
 
     my $chop;
     if (@_ == 0) {
-        my @char = m/\G ($q_char)/oxmsg;
+        my @char = m/\G ($q_char) /oxmsg;
         $chop = pop @char;
         $_ = join '', @char;
     }
@@ -572,7 +579,7 @@ sub Euhc::rindex($$;$) {
 #
 # UHC lower case (with parameter)
 #
-sub Euhc::lc($) {
+sub Euhc::lc(@) {
 
     local $_ = shift if @_;
 
@@ -582,7 +589,7 @@ sub Euhc::lc($) {
 
     local $^W = 0;
 
-    return join('', map {$lc{$_}||$_} m/\G ($q_char)/oxmsg);
+    return join('', map {$lc{$_}||$_} m/\G ($q_char) /oxmsg), @_;
 }
 
 #
@@ -596,13 +603,13 @@ sub Euhc::lc_() {
 
     local $^W = 0;
 
-    return join('', map {$lc{$_}||$_} m/\G ($q_char)/oxmsg);
+    return join('', map {$lc{$_}||$_} m/\G ($q_char) /oxmsg);
 }
 
 #
 # UHC upper case (with parameter)
 #
-sub Euhc::uc($) {
+sub Euhc::uc(@) {
 
     local $_ = shift if @_;
 
@@ -612,7 +619,7 @@ sub Euhc::uc($) {
 
     local $^W = 0;
 
-    return join('', map {$uc{$_}||$_} m/\G ($q_char) /oxmsg);
+    return join('', map {$uc{$_}||$_} m/\G ($q_char) /oxmsg), @_;
 }
 
 #
@@ -630,22 +637,16 @@ sub Euhc::uc_() {
 }
 
 #
-# UHC shift matched variables
+# UHC regexp capture
 #
-sub Euhc::shift_matched_var() {
+sub Euhc::capture($) {
 
-    # $1 --> return
-    # $2 --> $1
-    # $3 --> $2
-    # $4 --> $3
-    my $dollar1 = $1;
-
-    local $@;
-    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-        eval sprintf '*%d = *%d', $digit, $digit+1;
+    if ($last_s_matched and ($_[0] =~ m/\A [1-9][0-9]* \z/oxms)) {
+        return $_[0] + 1;
     }
-
-    return $dollar1;
+    else {
+        return $_[0];
+    }
 }
 
 #
@@ -736,10 +737,15 @@ sub Euhc::ignorecase(@) {
             # rewrite character class or escape character
             elsif (my $char = {
                 '\D' => '(?:[\x81-\xFE][\x00-\xFF]|[^\d])',
-                '\H' => '(?:[\x81-\xFE][\x00-\xFF]|[^\h])',
                 '\S' => '(?:[\x81-\xFE][\x00-\xFF]|[^\s])',
-                '\V' => '(?:[\x81-\xFE][\x00-\xFF]|[^\v])',
                 '\W' => '(?:[\x81-\xFE][\x00-\xFF]|[^\w])',
+
+                '\H' => '(?:[\x81-\xFE][\x00-\xFF]|[^\x09\x20])',
+                '\V' => '(?:[\x81-\xFE][\x00-\xFF]|[^\x0A\x0B\x0C\x0D])',
+
+                '\h' => '[\x09\x20]',         # not include \xA0
+                '\v' => '[\x0A\x0B\x0C\x0D]', # not include \x85
+
                 }->{$char[$i]}
             ) {
                 $char[$i] = $char;
@@ -1078,15 +1084,18 @@ sub _charlist {
                 '\a' => "\a",
                 '\e' => "\e",
                 '\d' => '\d',
-                '\h' => '\h',
                 '\s' => '\s',
-                '\v' => '\v',
                 '\w' => '\w',
                 '\D' => '(?:[\x81-\xFE][\x00-\xFF]|[^\d])',
-                '\H' => '(?:[\x81-\xFE][\x00-\xFF]|[^\h])',
                 '\S' => '(?:[\x81-\xFE][\x00-\xFF]|[^\s])',
-                '\V' => '(?:[\x81-\xFE][\x00-\xFF]|[^\v])',
                 '\W' => '(?:[\x81-\xFE][\x00-\xFF]|[^\w])',
+
+                '\H' => '(?:[\x81-\xFE][\x00-\xFF]|[^\x09\x20])',
+                '\V' => '(?:[\x81-\xFE][\x00-\xFF]|[^\x0A\x0B\x0C\x0D])',
+
+                '\h' => '[\x09\x20]',         # not include \xA0
+                '\v' => '[\x0A\x0B\x0C\x0D]', # not include \x85
+
             }->{$1};
         }
         elsif ($char[$i] =~ m/\A \\ ($q_char) \z/oxms) {
@@ -1190,7 +1199,15 @@ sub _charlist {
         }
 
         # single character of single octet code
-        elsif ($char[$i] =~ m/\A (?: [\x00-\xFF] | \\d | \\h | \\s | \\v | \\w ) \z/oxms) {
+        elsif ($char[$i] =~ m/\A (?: \\h ) \z/oxms) {
+            push @singleoctet, "\x09", "\x20";
+            $i += 1;
+        }
+        elsif ($char[$i] =~ m/\A (?: \\v ) \z/oxms) {
+            push @singleoctet, "\x0A","\x0B","\x0C","\x0D";
+            $i += 1;
+        }
+        elsif ($char[$i] =~ m/\A (?: [\x00-\xFF] | \\d | \\s | \\w ) \z/oxms) {
             push @singleoctet, $char[$i];
             $i += 1;
         }
@@ -1301,7 +1318,7 @@ sub charlist_not_qr {
 #
 # UHC order to character (with parameter)
 #
-sub Euhc::chr($) {
+sub Euhc::chr(;$) {
 
     my $c = @_ ? $_[0] : $_;
 
@@ -1335,57 +1352,6 @@ sub Euhc::chr_() {
             $c = int($c / 0x100);
         }
         return pack 'C*', @chr;
-    }
-}
-
-#
-# UHC character to order (with parameter)
-#
-sub Euhc::ord($) {
-
-    local $_ = shift if @_;
-
-    if (m/\A ($q_char) /oxms) {
-        my @ord = unpack 'C*', $1;
-        my $ord = 0;
-        while (my $o = shift @ord) {
-            $ord = $ord * 0x100 + $o;
-        }
-        return $ord;
-    }
-    else {
-        return CORE::ord $_;
-    }
-}
-
-#
-# UHC character to order (without parameter)
-#
-sub Euhc::ord_() {
-
-    if (m/\A ($q_char) /oxms) {
-        my @ord = unpack 'C*', $1;
-        my $ord = 0;
-        while (my $o = shift @ord) {
-            $ord = $ord * 0x100 + $o;
-        }
-        return $ord;
-    }
-    else {
-        return CORE::ord $_;
-    }
-}
-
-#
-# UHC reverse
-#
-sub Euhc::reverse(@) {
-
-    if (wantarray) {
-        return CORE::reverse @_;
-    }
-    else {
-        return join '', CORE::reverse(join('',@_) =~ m/\G ($q_char) /oxmsg);
     }
 }
 
@@ -3513,6 +3479,7 @@ sub _MSWin32_5Cended_path {
 # do UHC file
 #
 sub Euhc::do($) {
+
     my($filename) = @_;
 
     my $realfilename;
@@ -3574,6 +3541,7 @@ ITER_DO:
 # of ISBN 1-56592-149-6 Programming Perl, Second Edition.
 
 sub Euhc::require(;$) {
+
     local $_ = shift if @_;
     return 1 if $INC{$_};
 
@@ -3630,13 +3598,65 @@ ITER_REQUIRE:
 }
 
 #
-# UHC length by character
+# UHC character to order (with parameter)
 #
-sub UHC::length {
+sub UHC::ord(;$) {
 
     local $_ = shift if @_;
 
-    return scalar m/\G ($q_char) /oxmsg;
+    if (m/\A ($q_char) /oxms) {
+        my @ord = unpack 'C*', $1;
+        my $ord = 0;
+        while (my $o = shift @ord) {
+            $ord = $ord * 0x100 + $o;
+        }
+        return $ord;
+    }
+    else {
+        return CORE::ord $_;
+    }
+}
+
+#
+# UHC character to order (without parameter)
+#
+sub UHC::ord_() {
+
+    if (m/\A ($q_char) /oxms) {
+        my @ord = unpack 'C*', $1;
+        my $ord = 0;
+        while (my $o = shift @ord) {
+            $ord = $ord * 0x100 + $o;
+        }
+        return $ord;
+    }
+    else {
+        return CORE::ord $_;
+    }
+}
+
+#
+# UHC reverse
+#
+sub UHC::reverse(@) {
+
+    if (wantarray) {
+        return CORE::reverse @_;
+    }
+    else {
+        return join '', CORE::reverse(join('',@_) =~ m/\G ($q_char) /oxmsg);
+    }
+}
+
+#
+# UHC length by character
+#
+sub UHC::length(;$) {
+
+    local $_ = shift if @_;
+
+    local @_ = m/\G ($q_char) /oxmsg;
+    return scalar @_;
 }
 
 #
@@ -3644,24 +3664,30 @@ sub UHC::length {
 #
 sub UHC::substr ($$;$$) {
 
-    if (defined $_[3]) {
-        if (defined $_[4]) {
-            my(undef,$offset,$length,$replacement) = @_;
-            if ($_[0] =~ s/\A ((?:$q_char){$offset}) ((?:$q_char){0,$length}) \z/$1$replacement/xms) {
-                return $2;
-            }
+    my @char = $_[0] =~ m/\G ($q_char) /oxmsg;
+
+    # substr($string,$offset,$length,$replacement)
+    if (@_ == 4) {
+        my(undef,$offset,$length,$replacement) = @_;
+        my $substr = join '', splice(@char, $offset, $length, $replacement);
+        $_[0] = join '', @char;
+        return $substr;
+    }
+
+    # substr($string,$offset,$length)
+    elsif (@_ == 3) {
+        my(undef,$offset,$length) = @_;
+        return join '', (@char[$offset .. $#char])[0 .. $length-1];
+    }
+
+    # substr($string,$offset)
+    else {
+        my(undef,$offset) = @_;
+        if ($offset >= 0) {
+            return join '', @char[$offset .. $#char];
         }
         else {
-            my($expr,$offset,$length) = @_;
-            if ($expr =~ m/\A (?:$q_char){$offset} ((?:$q_char){0,$length}) \z/xms) {
-                return $1;
-            }
-        }
-    }
-    else {
-        my($expr,$offset) = @_;
-        if ($expr =~ m/\A (?:$q_char){$offset} (.*) \z/xms) {
-            return $1;
+            return join '', @char[($#char+$offset+1) .. $#char];
         }
     }
 
@@ -3675,10 +3701,10 @@ sub UHC::index($$;$) {
 
     my $index;
     if (@_ == 3) {
-        $index = Euhc::index($_[0],$_[1],$_[2]);
+        $index = Euhc::index($_[0], $_[1], CORE::length(UHC::substr($_[0], 0, $_[2])));
     }
     else {
-        $index = Euhc::index($_[0],$_[1]);
+        $index = Euhc::index($_[0], $_[1]);
     }
 
     if ($index == -1) {
@@ -3696,10 +3722,10 @@ sub UHC::rindex($$;$) {
 
     my $rindex;
     if (@_ == 3) {
-        $rindex = Euhc::rindex($_[0],$_[1],$_[2]);
+        $rindex = Euhc::rindex($_[0], $_[1], CORE::length(UHC::substr($_[0], 0, $_[2])));
     }
     else {
-        $rindex = Euhc::rindex($_[0],$_[1]);
+        $rindex = Euhc::rindex($_[0], $_[1]);
     }
 
     if ($rindex == -1) {
@@ -3736,13 +3762,10 @@ Euhc - Run-time routines for UHC.pm
     Euhc::lc_;
     Euhc::uc(...);
     Euhc::uc_;
-    Euhc::shift_matched_var();
+    Euhc::capture(...);
     Euhc::ignorecase(...);
     Euhc::chr(...);
     Euhc::chr_;
-    Euhc::ord(...);
-    Euhc::ord_;
-    Euhc::reverse(...);
     Euhc::X ...;
     Euhc::X_;
     Euhc::glob(...);
@@ -3757,6 +3780,9 @@ Euhc - Run-time routines for UHC.pm
     Euhc::do(...);
     Euhc::require(...);
 
+    UHC::ord(...);
+    UHC::ord_;
+    UHC::reverse(...);
     UHC::length(...);
     UHC::substr(...);
     UHC::index(...);
@@ -3831,13 +3857,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =item Transliteration
 
-  $tr = Euhc::tr($string,$searchlist,$replacementlist,$modifier);
-  $tr = Euhc::tr($string,$searchlist,$replacementlist);
+  $tr = Euhc::tr($variable,$bind_operator,$searchlist,$replacementlist,$modifier);
+  $tr = Euhc::tr($variable,$bind_operator,$searchlist,$replacementlist);
 
   This function scans a UHC string character by character and replaces all
   occurrences of the characters found in $searchlist with the corresponding character
   in $replacementlist. It returns the number of characters replaced or deleted.
-  If no UHC string is specified via =~ operator, the $_ string is translated.
+  If no UHC string is specified via =~ operator, the $_ variable is translated.
   $modifier are:
 
   Modifier   Meaning
@@ -3896,17 +3922,17 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   This is the internal function implementing the \U escape in double-quoted
   strings.
 
-=item Shift matched variables
+=item Make capture number
 
-  $dollar1 = Euhc::shift_matched_var();
+  $capturenumber = Euhc::capture($string);
 
-  This function is internal use to s/ / /.
+  This function is internal use to m/ /i, s/ / /i, split and qr/ /i.
 
 =item Make ignore case string
 
   @ignorecase = Euhc::ignorecase(@string);
 
-  This function is internal use to m/ /i, s/ / /i and qr/ /i.
+  This function is internal use to m/ /i, s/ / /i, split and qr/ /i.
 
 =item Make character
 
@@ -3916,33 +3942,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   This function returns the character represented by that $code in the character
   set. For example, Euhc::chr(65) is "A" in either ASCII or UHC, and
   Euhc::chr(0x82a0) is a UHC HIRAGANA LETTER A. For the reverse of Euhc::chr,
-  use Euhc::ord.
-
-=item Order of Character
-
-  $ord = Euhc::ord($string);
-  $ord = Euhc::ord_;
-
-  This function returns the numeric value (ASCII or UHC) of the first character
-  of $string. The return value is always unsigned.
-
-=item Reverse list or string
-
-  @reverse = Euhc::reverse(@list);
-  $reverse = Euhc::reverse(@list);
-
-  In list context, this function returns a list value consisting of the elements of
-  @list in the opposite order. The function can be used to create descending sequences:
-
-  for (Euhc::reverse(1 .. 10)) { ... }
-
-  Because of the way hashes flatten into lists when passed as a @list, reverse can also
-  be used to invert a hash, presuming the values are unique:
-
-  %barfoo = Euhc::reverse(%foobar);
-
-  In scalar context, the function concatenates all the elements of LIST and then returns
-  the reverse of that resulting string, character by character.
+  use UHC::ord.
 
 =item File test operator -X
 
@@ -4192,6 +4192,32 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   it'll return true otherwise.
 
   See also do file.
+
+=item Order of Character
+
+  $ord = UHC::ord($string);
+  $ord = UHC::ord_;
+
+  This function returns the numeric value (ASCII or UHC) of the first character
+  of $string. The return value is always unsigned.
+
+=item Reverse list or string
+
+  @reverse = UHC::reverse(@list);
+  $reverse = UHC::reverse(@list);
+
+  In list context, this function returns a list value consisting of the elements of
+  @list in the opposite order. The function can be used to create descending sequences:
+
+  for (UHC::reverse(1 .. 10)) { ... }
+
+  Because of the way hashes flatten into lists when passed as a @list, reverse can also
+  be used to invert a hash, presuming the values are unique:
+
+  %barfoo = UHC::reverse(%foobar);
+
+  In scalar context, the function concatenates all the elements of LIST and then returns
+  the reverse of that resulting string, character by character.
 
 =item length by UHC character
 
