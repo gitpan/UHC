@@ -9,9 +9,9 @@ package Euhc;
 
 use strict;
 use 5.00503;
-use vars qw($VERSION $_warning $last_s_matched);
+use vars qw($VERSION $_warning);
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.41 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.42 $ =~ m/(\d+)/xmsg;
 
 use Fcntl;
 use Symbol;
@@ -111,7 +111,7 @@ elsif (__PACKAGE__ eq 'Einfomixv6als') {
     $is_shiftjis_family = 1;
 }
 
-# UHC
+# Shift_JIS
 elsif (__PACKAGE__ eq 'E'.'sjis') {
     %range_tr = (
         1 => [ [0x00..0x80,0xA0..0xDF,0xFD..0xFF],
@@ -219,6 +219,7 @@ sub Euhc::unlink(@);
 sub Euhc::chdir(;$);
 sub Euhc::do($);
 sub Euhc::require(;$);
+sub Euhc::telldir(*);
 
 sub UHC::ord(;$);
 sub UHC::ord_();
@@ -308,7 +309,7 @@ my @maxchar = (undef, $chars1[-1], $chars2[-1], $chars3[-1], $chars4[-1]);
 #
 sub Euhc::split(;$$$) {
 
-    # P.794 split
+    # P.794 29.2.161. split
     # in Chapter 29: Functions
     # of ISBN 0-596-00027-8 Programming Perl Third Edition.
 
@@ -577,75 +578,79 @@ sub Euhc::rindex($$;$) {
 }
 
 #
-# UHC lower case (with parameter)
+# UHC lower case
 #
-sub Euhc::lc(@) {
-
-    local $_ = shift if @_;
+{
+    # P.132 4.8.2. Lexically Scoped Variables: my
+    # in Chapter 4: Statements and Declarations
+    # of ISBN 0-596-00027-8 Programming Perl Third Edition.
+    # (and so on)
 
     my %lc = ();
     @lc{qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)} =
         qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
 
-    local $^W = 0;
+    # lower case with parameter
+    sub Euhc::lc(@) {
 
-    return join('', map {$lc{$_}||$_} m/\G ($q_char) /oxmsg), @_;
+        local $_ = shift if @_;
+
+        return join('', map {defined($lc{$_}) ? $lc{$_} : $_} m/\G ($q_char) /oxmsg), @_;
+    }
+
+    # lower case without parameter
+    sub Euhc::lc_() {
+
+        return join('', map {defined($lc{$_}) ? $lc{$_} : $_} m/\G ($q_char) /oxmsg);
+    }
 }
 
 #
-# UHC lower case (without parameter)
+# UHC upper case
 #
-sub Euhc::lc_() {
-
-    my %lc = ();
-    @lc{qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)} =
-        qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
-
-    local $^W = 0;
-
-    return join('', map {$lc{$_}||$_} m/\G ($q_char) /oxmsg);
-}
-
-#
-# UHC upper case (with parameter)
-#
-sub Euhc::uc(@) {
-
-    local $_ = shift if @_;
-
+{
     my %uc = ();
     @uc{qw(a b c d e f g h i j k l m n o p q r s t u v w x y z)} =
         qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
 
-    local $^W = 0;
+    # upper case with parameter
+    sub Euhc::uc(@) {
 
-    return join('', map {$uc{$_}||$_} m/\G ($q_char) /oxmsg), @_;
-}
+        local $_ = shift if @_;
 
-#
-# UHC upper case (without parameter)
-#
-sub Euhc::uc_() {
+        return join('', map {defined($uc{$_}) ? $uc{$_} : $_} m/\G ($q_char) /oxmsg), @_;
+    }
 
-    my %uc = ();
-    @uc{qw(a b c d e f g h i j k l m n o p q r s t u v w x y z)} =
-        qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
+    # upper case without parameter
+    sub Euhc::uc_() {
 
-    local $^W = 0;
-
-    return join('', map {$uc{$_}||$_} m/\G ($q_char) /oxmsg);
+        return join('', map {defined($uc{$_}) ? $uc{$_} : $_} m/\G ($q_char) /oxmsg);
+    }
 }
 
 #
 # UHC regexp capture
 #
-sub Euhc::capture($) {
+{
+    my $last_s_matched = 0;
 
-    if ($last_s_matched and ($_[0] =~ m/\A [1-9][0-9]* \z/oxms)) {
-        return $_[0] + 1;
+    sub Euhc::capture($) {
+        if ($last_s_matched and ($_[0] =~ m/\A [1-9][0-9]* \z/oxms)) {
+            return $_[0] + 1;
+        }
+        else {
+            return $_[0];
+        }
     }
-    else {
-        return $_[0];
+
+    # UHC regexp mark last m// or qr// matched
+    sub Euhc::m_matched() {
+        $last_s_matched = 0;
+    }
+
+    # UHC regexp mark last s/// or qr matched
+    sub Euhc::s_matched() {
+        $last_s_matched = 1;
     }
 }
 
@@ -1367,7 +1372,7 @@ sub Euhc::r(;*@) {
         return wantarray ? (-r _,@_) : -r _;
     }
 
-    # P.908 Symbol
+    # P.908 32.39. Symbol
     # in Chapter 32: Standard Modules
     # of ISBN 0-596-00027-8 Programming Perl Third Edition.
     # (and so on)
@@ -1637,14 +1642,13 @@ sub Euhc::e(;*@) {
     local $_ = shift if @_;
     croak 'Too many arguments for -e (Euhc::e)' if @_ and not wantarray;
 
-    local $^W = 0;
-
+    my $fh = Symbol::qualify_to_ref $_;
     if ($_ eq '_') {
         return wantarray ? (-e _,@_) : -e _;
     }
 
     # return false if directory handle
-    elsif (defined telldir(my $fh = Symbol::qualify_to_ref $_)) {
+    elsif (defined Euhc::telldir($fh)) {
         return wantarray ? ('',@_) : '';
     }
 
@@ -2105,14 +2109,11 @@ sub Euhc::T(;*@) {
     my $fh = Symbol::qualify_to_ref $_;
     if (fileno $fh) {
 
-        # avoid warning of telldir by not DIRHANDLE
-        local $^W = 0;
-
-        if (defined telldir $fh) {
+        if (defined Euhc::telldir($fh)) {
             return wantarray ? (undef,@_) : undef;
         }
 
-        # P.813 tell
+        # P.813 29.2.176. tell
         # in Chapter 29: Functions
         # of ISBN 0-596-00027-8 Programming Perl Third Edition.
         # (and so on)
@@ -2181,10 +2182,7 @@ sub Euhc::B(;*@) {
     my $fh = Symbol::qualify_to_ref $_;
     if (fileno $fh) {
 
-        # avoid warning of telldir by not DIRHANDLE
-        local $^W = 0;
-
-        if (defined telldir $fh) {
+        if (defined Euhc::telldir($fh)) {
             return wantarray ? (undef,@_) : undef;
         }
 
@@ -3400,7 +3398,7 @@ sub Euhc::unlink(@) {
                 $file = qq{"$file"};
             }
 
-            # P.565 Cleaning Up Your Environment
+            # P.565 23.1.2. Cleaning Up Your Environment
             # in Chapter 23: Security
             # of ISBN 0-596-00027-8 Programming Perl Third Edition.
             # (and so on)
@@ -3598,6 +3596,16 @@ ITER_REQUIRE:
 }
 
 #
+# UHC telldir avoid warning
+#
+sub Euhc::telldir(*) {
+
+    local $^W = 0;
+
+    return CORE::telldir $_[0];
+}
+
+#
 # UHC character to order (with parameter)
 #
 sub UHC::ord(;$) {
@@ -3662,7 +3670,7 @@ sub UHC::length(;$) {
 #
 # UHC substr by character
 #
-sub UHC::substr ($$;$$) {
+sub UHC::substr($$;$$) {
 
     my @char = $_[0] =~ m/\G ($q_char) /oxmsg;
 
@@ -3677,21 +3685,27 @@ sub UHC::substr ($$;$$) {
     # substr($string,$offset,$length)
     elsif (@_ == 3) {
         my(undef,$offset,$length) = @_;
-        return join '', (@char[$offset .. $#char])[0 .. $length-1];
+        if ($length == 0) {
+            return '';
+        }
+        if ($offset >= 0) {
+            return join '', (@char[$offset            .. $#char])[0 .. $length-1];
+        }
+        else {
+            return join '', (@char[($#char+$offset+1) .. $#char])[0 .. $length-1];
+        }
     }
 
     # substr($string,$offset)
     else {
         my(undef,$offset) = @_;
         if ($offset >= 0) {
-            return join '', @char[$offset .. $#char];
+            return join '', @char[$offset            .. $#char];
         }
         else {
             return join '', @char[($#char+$offset+1) .. $#char];
         }
     }
-
-    croak "$0: UHC::substr outside of string";
 }
 
 #
