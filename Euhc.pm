@@ -11,7 +11,7 @@ use strict;
 use 5.00503;
 use vars qw($VERSION $_warning);
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.43 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.44 $ =~ m/(\d+)/xmsg;
 
 use Fcntl;
 use Symbol;
@@ -173,6 +173,7 @@ sub Euhc::capture($);
 sub Euhc::ignorecase(@);
 sub Euhc::chr(;$);
 sub Euhc::chr_();
+sub Euhc::filetest(@);
 sub Euhc::r(;*@);
 sub Euhc::w(;*@);
 sub Euhc::x(;*@);
@@ -200,6 +201,7 @@ sub Euhc::B(;*@);
 sub Euhc::M(;*@);
 sub Euhc::A(;*@);
 sub Euhc::C(;*@);
+sub Euhc::filetest_(@);
 sub Euhc::r_();
 sub Euhc::w_();
 sub Euhc::x_();
@@ -1380,6 +1382,25 @@ sub Euhc::chr_() {
 }
 
 #
+# UHC stacked file test expr
+#
+sub Euhc::filetest (@) {
+
+    my $file     = pop @_;
+    my $filetest = substr(pop @_, 1);
+
+    unless (eval qq{Euhc::$filetest(\$file)}) {
+        return '';
+    }
+    for my $filetest (reverse @_) {
+        unless (eval qq{ $filetest _ }) {
+            return '';
+        }
+    }
+    return 1;
+}
+
+#
 # UHC file test -r expr
 #
 sub Euhc::r(;*@) {
@@ -2352,6 +2373,24 @@ sub Euhc::C(;*@) {
         }
     }
     return wantarray ? (undef,@_) : undef;
+}
+
+#
+# UHC stacked file test $_
+#
+sub Euhc::filetest_ (@) {
+
+    my $filetest = substr(pop @_, 1);
+
+    unless (eval qq{Euhc::${filetest}_}) {
+        return '';
+    }
+    for my $filetest (reverse @_) {
+        unless (eval qq{ $filetest _ }) {
+            return '';
+        }
+    }
+    return 1;
 }
 
 #
