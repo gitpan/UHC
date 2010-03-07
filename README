@@ -17,7 +17,7 @@ SYNOPSIS
 DESCRIPTION
 
       This software is "Yet Another JPerl" written by Perl.
-      We can write the script in UHC again.
+      We can write the script in UHC (Unified Hangul Code) again.
 
       This software treats UHC directly. Therefore, there is not UTF8 flag.
 
