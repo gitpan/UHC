@@ -1,5 +1,5 @@
-UHC.pm
-Euhc.pm
+lib/UHC.pm
+lib/Euhc.pm
 perl58.bat
 perl510.bat
 perl512.bat
