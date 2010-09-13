@@ -1,7 +1,7 @@
 package UHC;
 ######################################################################
 #
-# UHC - "Yet Another JPerl" Source code filter to escape UHC
+# UHC - Source code filter to escape UHC
 #
 #                  http://search.cpan.org/dist/UHC/
 #
@@ -19,7 +19,7 @@ use Euhc;
 
 BEGIN { eval q{ use vars qw($VERSION $_warning) } }
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.63 $ =~ m/(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.64 $ =~ m/(\d+)/oxmsg;
 
 # poor Symbol.pm - substitute of real Symbol.pm
 BEGIN {
@@ -625,8 +625,10 @@ sub escape {
     elsif (m{\G \b index \b         (?! \s* => )              }oxgc) { $slash = 'm//'; return   'Euhc::index';        }
     elsif (m{\G \b UHC::rindex \b  (?! \s* => )              }oxgc) { $slash = 'm//'; return   'UHC::rindex';        }
     elsif (m{\G \b rindex \b        (?! \s* => )              }oxgc) { $slash = 'm//'; return   'Euhc::rindex';       }
-    elsif (m{\G \b lc    (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $slash = 'm//'; return   'Euhc::lc';           }
-    elsif (m{\G \b uc    (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $slash = 'm//'; return   'Euhc::uc';           }
+    elsif (m{\G \b lc      (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $slash = 'm//'; return 'Euhc::lc';           }
+    elsif (m{\G \b lcfirst (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $slash = 'm//'; return 'Euhc::lcfirst';      }
+    elsif (m{\G \b uc      (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $slash = 'm//'; return 'Euhc::uc';           }
+    elsif (m{\G \b ucfirst (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $slash = 'm//'; return 'Euhc::ucfirst';      }
 
     # stacked file test operators
     #
@@ -687,7 +689,9 @@ sub escape {
     elsif (m{\G \b ord   (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $slash = 'div'; return   $function_ord;               }
     elsif (m{\G \b glob  (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $slash = 'm//'; return   'Euhc::glob';               }
     elsif (m{\G \b lc \b      (?! \s* => )                    }oxgc) { $slash = 'm//'; return   'Euhc::lc_';                }
+    elsif (m{\G \b lcfirst \b (?! \s* => )                    }oxgc) { $slash = 'm//'; return   'Euhc::lcfirst_';           }
     elsif (m{\G \b uc \b      (?! \s* => )                    }oxgc) { $slash = 'm//'; return   'Euhc::uc_';                }
+    elsif (m{\G \b ucfirst \b (?! \s* => )                    }oxgc) { $slash = 'm//'; return   'Euhc::ucfirst_';           }
 
     elsif (m{\G    (-[rwxoRWXOezfdlpSbctugkTB](?:\s+-[rwxoRWXOezfdlpSbctugkTB])+)
                            \b (?! \s* => )                    }oxgc) { $slash = 'm//'; return   "Euhc::filetest_(qw($1))";  }
@@ -1856,8 +1860,10 @@ E_STRING_LOOP:
         elsif ($string =~ m{\G \b index \b                                   }oxgc) { $e_string .=   'Euhc::index';         $slash = 'm//'; }
         elsif ($string =~ m{\G \b UHC::rindex \b                            }oxgc) { $e_string .=   'UHC::rindex';         $slash = 'm//'; }
         elsif ($string =~ m{\G \b rindex \b                                  }oxgc) { $e_string .=   'Euhc::rindex';        $slash = 'm//'; }
-        elsif ($string =~ m{\G \b lc    (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $e_string .=   'Euhc::lc';            $slash = 'm//'; }
-        elsif ($string =~ m{\G \b uc    (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $e_string .=   'Euhc::uc';            $slash = 'm//'; }
+        elsif ($string =~ m{\G \b lc      (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $e_string .= 'Euhc::lc';            $slash = 'm//'; }
+        elsif ($string =~ m{\G \b lcfirst (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $e_string .= 'Euhc::lcfirst';       $slash = 'm//'; }
+        elsif ($string =~ m{\G \b uc      (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $e_string .= 'Euhc::uc';            $slash = 'm//'; }
+        elsif ($string =~ m{\G \b ucfirst (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $e_string .= 'Euhc::ucfirst';       $slash = 'm//'; }
 
         elsif ($string =~ m{\G (-[rwxoRWXOezfdlpSbctugkTB](?:\s+-[rwxoRWXOezfdlpSbctugkTB])+)
                                                                           \s* (\") ((?:$qq_char)+?)             (\") }oxgc) { $e_string .= "Euhc::filetest(qw($1)," . e_qq('',  $2,$4,$3) . ")"; $slash = 'm//'; }
@@ -1911,7 +1917,9 @@ E_STRING_LOOP:
         elsif ($string =~ m{\G \b ord   (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $e_string .=   $function_ord;              $slash = 'div'; }
         elsif ($string =~ m{\G \b glob  (?= \s+[A-Za-z_]|\s*['"`\$\@\&\*\(]) }oxgc) { $e_string .=   'Euhc::glob';              $slash = 'm//'; }
         elsif ($string =~ m{\G \b lc \b                                      }oxgc) { $e_string .=   'Euhc::lc_';               $slash = 'm//'; }
+        elsif ($string =~ m{\G \b lcfirst \b                                 }oxgc) { $e_string .=   'Euhc::lcfirst_';          $slash = 'm//'; }
         elsif ($string =~ m{\G \b uc \b                                      }oxgc) { $e_string .=   'Euhc::uc_';               $slash = 'm//'; }
+        elsif ($string =~ m{\G \b ucfirst \b                                 }oxgc) { $e_string .=   'Euhc::ucfirst_';          $slash = 'm//'; }
 
         elsif ($string =~ m{\G    (-[rwxoRWXOezfdlpSbctugkTB](?:\s+-[rwxoRWXOezfdlpSbctugkTB])+)
                                                                    \b        }oxgc) { $e_string .=   "Euhc::filetest_(qw($1))"; $slash = 'm//'; }
@@ -2548,6 +2556,17 @@ sub e_qq {
     )}oxmsg;
 
     for (my $i=0; $i <= $#char; $i++) {
+
+        # "\L\u" --> "\u\L"
+        if (($char[$i] eq '\L') and ($char[$i+1] eq '\u')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # "\U\l" --> "\l\U"
+        elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
         if (0) {
         }
 
@@ -2556,13 +2575,13 @@ sub e_qq {
             $char[$i] = $1 . '\\' . $2;
         }
 
-        # \L \U \Q \E
+        # \u \l \U \L \Q \E
         elsif ($char[$i] =~ m/\A ([<>]) \z/oxms) {
             if ($right_e < $left_e) {
                 $char[$i] = '\\' . $char[$i];
             }
         }
-        elsif ($char[$i] eq '\L') {
+        elsif ($char[$i] eq '\u') {
 
             # "STRING @{[ LIST EXPR ]} MORE STRING"
             #
@@ -2571,11 +2590,19 @@ sub e_qq {
             # of ISBN 0-596-00313-7 Perl Cookbook, 2nd Edition.
             # (and so on)
 
-            $char[$i] = '@{[Euhc::lc qq<';
+            $char[$i] = '@{[Euhc::ucfirst qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\l') {
+            $char[$i] = '@{[Euhc::lcfirst qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\U') {
             $char[$i] = '@{[Euhc::uc qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\L') {
+            $char[$i] = '@{[Euhc::lc qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\Q') {
@@ -2723,6 +2750,17 @@ sub e_heredoc {
     )}oxmsg;
 
     for (my $i=0; $i <= $#char; $i++) {
+
+        # "\L\u" --> "\u\L"
+        if (($char[$i] eq '\L') and ($char[$i+1] eq '\u')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # "\U\l" --> "\l\U"
+        elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
         if (0) {
         }
 
@@ -2731,18 +2769,26 @@ sub e_heredoc {
             $char[$i] = $1 . '\\' . $2;
         }
 
-        # \L \U \Q \E
+        # \u \l \U \L \Q \E
         elsif ($char[$i] =~ m/\A ([<>]) \z/oxms) {
             if ($right_e < $left_e) {
                 $char[$i] = '\\' . $char[$i];
             }
         }
-        elsif ($char[$i] eq '\L') {
-            $char[$i] = '@{[Euhc::lc qq<';
+        elsif ($char[$i] eq '\u') {
+            $char[$i] = '@{[Euhc::ucfirst qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\l') {
+            $char[$i] = '@{[Euhc::lcfirst qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\U') {
             $char[$i] = '@{[Euhc::uc qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\L') {
+            $char[$i] = '@{[Euhc::lc qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\Q') {
@@ -2886,6 +2932,17 @@ sub e_qr {
     my $left_e  = 0;
     my $right_e = 0;
     for (my $i=0; $i <= $#char; $i++) {
+
+        # "\L\u" --> "\u\L"
+        if (($char[$i] eq '\L') and ($char[$i+1] eq '\u')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # "\U\l" --> "\l\U"
+        elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
         if (0) {
         }
 
@@ -2973,18 +3030,26 @@ sub e_qr {
             }
         }
 
-        # \L \U \Q \E
+        # \u \l \U \L \Q \E
         elsif ($char[$i] =~ m/\A [<>] \z/oxms) {
             if ($right_e < $left_e) {
                 $char[$i] = '\\' . $char[$i];
             }
         }
-        elsif ($char[$i] eq '\L') {
-            $char[$i] = '@{[Euhc::lc qq<';
+        elsif ($char[$i] eq '\u') {
+            $char[$i] = '@{[Euhc::ucfirst qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\l') {
+            $char[$i] = '@{[Euhc::lcfirst qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\U') {
             $char[$i] = '@{[Euhc::uc qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\L') {
+            $char[$i] = '@{[Euhc::lc qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\Q') {
@@ -3289,6 +3354,17 @@ sub e_s1 {
     my $left_e  = 0;
     my $right_e = 0;
     for (my $i=0; $i <= $#char; $i++) {
+
+        # "\L\u" --> "\u\L"
+        if (($char[$i] eq '\L') and ($char[$i+1] eq '\u')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # "\U\l" --> "\l\U"
+        elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
         if (0) {
         }
 
@@ -3366,18 +3442,26 @@ sub e_s1 {
             }
         }
 
-        # \L \U \Q \E
+        # \u \l \U \L \Q \E
         elsif ($char[$i] =~ m/\A [<>] \z/oxms) {
             if ($right_e < $left_e) {
                 $char[$i] = '\\' . $char[$i];
             }
         }
-        elsif ($char[$i] eq '\L') {
-            $char[$i] = '@{[Euhc::lc qq<';
+        elsif ($char[$i] eq '\u') {
+            $char[$i] = '@{[Euhc::ucfirst qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\l') {
+            $char[$i] = '@{[Euhc::lcfirst qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\U') {
             $char[$i] = '@{[Euhc::uc qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\L') {
+            $char[$i] = '@{[Euhc::lc qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\Q') {
@@ -3915,6 +3999,17 @@ sub e_split {
     my $left_e  = 0;
     my $right_e = 0;
     for (my $i=0; $i <= $#char; $i++) {
+
+        # "\L\u" --> "\u\L"
+        if (($char[$i] eq '\L') and ($char[$i+1] eq '\u')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
+        # "\U\l" --> "\l\U"
+        elsif (($char[$i] eq '\U') and ($char[$i+1] eq '\l')) {
+            @char[$i,$i+1] = @char[$i+1,$i];
+        }
+
         if (0) {
         }
 
@@ -4004,18 +4099,26 @@ sub e_split {
             }
         }
 
-        # \L \U \Q \E
+        # \u \l \U \L \Q \E
         elsif ($char[$i] =~ m/\A ([<>]) \z/oxms) {
             if ($right_e < $left_e) {
                 $char[$i] = '\\' . $char[$i];
             }
         }
-        elsif ($char[$i] eq '\L') {
-            $char[$i] = '@{[Euhc::lc qq<';
+        elsif ($char[$i] eq '\u') {
+            $char[$i] = '@{[Euhc::ucfirst qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\l') {
+            $char[$i] = '@{[Euhc::lcfirst qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\U') {
             $char[$i] = '@{[Euhc::uc qq<';
+            $left_e++;
+        }
+        elsif ($char[$i] eq '\L') {
+            $char[$i] = '@{[Euhc::lc qq<';
             $left_e++;
         }
         elsif ($char[$i] eq '\Q') {
@@ -4452,7 +4555,7 @@ __END__
 
 =head1 NAME
 
-UHC - "Yet Another JPerl" Source code filter to escape UHC
+UHC - Source code filter to escape UHC
 
 =head1 SYNOPSIS
 
@@ -4599,7 +4702,7 @@ You need write 'use UHC;' in your script.
   ---------------------------------
   Before      After
   ---------------------------------
-  use utf8;   use UHC;
+  (nothing)   use UHC;
   ---------------------------------
 
 =head1 Escaping Multiple Octet Code (UHC software provides)
@@ -4698,7 +4801,9 @@ functions.
   index       Euhc::index
   rindex      Euhc::rindex
   lc          Euhc::lc
+  lcfirst     Euhc::lcfirst
   uc          Euhc::uc
+  ucfirst     Euhc::ucfirst
   chr         Euhc::chr
   glob        Euhc::glob
   lstat       Euhc::lstat
@@ -5246,7 +5351,7 @@ programming environment like at that time.
  T1008901080816 ZASSHI 08901-8
  http://ascii.asciimw.jp/books/magazines/unix.shtml
 
- Yet Another JPerl family
+ UHC software family
  http://search.cpan.org/dist/Big5HKSCS/
  http://search.cpan.org/dist/Big5Plus/
  http://search.cpan.org/dist/EUCJP/
@@ -5296,7 +5401,7 @@ I am thankful to all persons.
  http://www.rakunet.org/TSNET/TSabc/18/546.html
 
  Hiroaki Izumi, Perl5.8/Perl5.10 is not useful on the Windows.
- http://www.aritia.org/hizumi/perl/perlwin.html
+ http://www.aritia.jp/hizumi/oldtext/perlwin.html
 
  TSUKAMOTO Makio, Perl memo/file path of Windows
  http://digit.que.ne.jp/work/wiki.cgi?Perl%E3%83%A1%E3%83%A2%2FWindows%E3%81%A7%E3%81%AE%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%83%91%E3%82%B9
@@ -5322,6 +5427,12 @@ I am thankful to all persons.
 
  Juerd, Perl Unicode Advice
  http://juerd.nl/site.plp/perluniadvice
+
+ daily dayflower, 2008-06-25 perluniadvice
+ http://d.hatena.ne.jp/dayflower/20080625/1214374293
+
+ Jesse Vincent, Compatibility is a virtue
+ http://www.nntp.perl.org/group/perl.perl5.porters/2010/05/msg159825.html
 
  Tokyo-pm archive
  http://mail.pm.org/pipermail/tokyo-pm/

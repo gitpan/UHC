@@ -1,6 +1,6 @@
 NAME
 
-       UHC - "Yet Another JPerl" Source code filter for UHC script
+       UHC - Source code filter for UHC script
 
 SYNOPSIS
     In your script:
@@ -17,7 +17,7 @@ SYNOPSIS
 
 DESCRIPTION
 
-      This software is "Yet Another JPerl" written by Perl.
+      This software is "JPerl on the Modern Perl" written by Perl.
       We can write the script in UHC (Unified Hangul Code) again.
 
       This software treats UHC directly. Therefore, there is not UTF8 flag.

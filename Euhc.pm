@@ -23,7 +23,7 @@ BEGIN {
 
 BEGIN { eval q{ use vars qw($VERSION $_warning) } }
 
-$VERSION = sprintf '%d.%02d', q$Revision: 0.63 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.64 $ =~ m/(\d+)/xmsg;
 
 # poor Symbol.pm - substitute of real Symbol.pm
 BEGIN {
@@ -262,8 +262,12 @@ sub Euhc::tr($$$$;$);
 sub Euhc::chop(@);
 sub Euhc::index($$;$);
 sub Euhc::rindex($$;$);
+sub Euhc::lcfirst(@);
+sub Euhc::lcfirst_();
 sub Euhc::lc(@);
 sub Euhc::lc_();
+sub Euhc::ucfirst(@);
+sub Euhc::ucfirst_();
 sub Euhc::uc(@);
 sub Euhc::uc_();
 sub Euhc::capture($);
@@ -714,6 +718,27 @@ sub Euhc::rindex($$;$) {
         );
     }
 
+    # lower case first with parameter
+    sub Euhc::lcfirst(@) {
+        if (@_) {
+            my $s = shift @_;
+            if (@_ and wantarray) {
+                return Euhc::lc(CORE::substr($s,0,1)) . CORE::substr($s,1), @_;
+            }
+            else {
+                return Euhc::lc(CORE::substr($s,0,1)) . CORE::substr($s,1);
+            }
+        }
+        else {
+            return Euhc::lc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+        }
+    }
+
+    # lower case first without parameter
+    sub Euhc::lcfirst_() {
+        return Euhc::lc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+    }
+
     # lower case with parameter
     sub Euhc::lc(@) {
         if (@_) {
@@ -780,6 +805,27 @@ sub Euhc::rindex($$;$) {
             "\xFD" => "\xDD", # LATIN LETTER Y WITH ACUTE
             "\xFE" => "\xDE", # LATIN LETTER THORN (Icelandic)
         );
+    }
+
+    # upper case first with parameter
+    sub Euhc::ucfirst(@) {
+        if (@_) {
+            my $s = shift @_;
+            if (@_ and wantarray) {
+                return Euhc::uc(CORE::substr($s,0,1)) . CORE::substr($s,1), @_;
+            }
+            else {
+                return Euhc::uc(CORE::substr($s,0,1)) . CORE::substr($s,1);
+            }
+        }
+        else {
+            return Euhc::uc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+        }
+    }
+
+    # upper case first without parameter
+    sub Euhc::ucfirst_() {
+        return Euhc::uc(CORE::substr($_,0,1)) . CORE::substr($_,1);
     }
 
     # upper case with parameter
@@ -4244,8 +4290,12 @@ Euhc - Run-time routines for UHC.pm
     Euhc::rindex(...);
     Euhc::lc(...);
     Euhc::lc_;
+    Euhc::lcfirst(...);
+    Euhc::lcfirst_;
     Euhc::uc(...);
     Euhc::uc_;
+    Euhc::ucfirst(...);
+    Euhc::ucfirst_;
     Euhc::capture(...);
     Euhc::ignorecase(...);
     Euhc::chr(...);
@@ -4390,6 +4440,15 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   Returns a lowercase version of UHC string (or $_, if omitted). This is the
   internal function implementing the \L escape in double-quoted strings.
 
+=item Lower case first character of string
+
+  $lcfirst = Euhc::lcfirst($string);
+  $lcfirst = Euhc::lcfirst_;
+
+  Returns a version of UHC string (or $_, if omitted) with the first character
+  lowercased. This is the internal function implementing the \l escape in double-
+  quoted strings.
+
 =item Upper case string
 
   $uc = Euhc::uc($string);
@@ -4398,6 +4457,15 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   Returns an uppercased version of UHC string (or $_, if string is omitted).
   This is the internal function implementing the \U escape in double-quoted
   strings.
+
+=item Upper case first character of string
+
+  $ucfirst = Euhc::ucfirst($string);
+  $ucfirst = Euhc::ucfirst_;
+
+  Returns a version of UHC string (or $_, if omitted) with the first character
+  uppercased. This is the internal function implementing the \u escape in double-
+  quoted strings.
 
 =item Make capture number
 
