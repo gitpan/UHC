@@ -4,7 +4,7 @@ die "This file is not encoded in UHC.\n" if q{‚ } ne "\x82\xa0";
 use UHC;
 print "1..4\n";
 
-my $__FILE__ = $__FILE__;
+my $__FILE__ = __FILE__;
 
 #
 # chop, chomp

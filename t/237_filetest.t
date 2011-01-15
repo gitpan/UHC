@@ -6,10 +6,10 @@ die "This file is not encoded in UHC.\n" if q{‚ } ne "\x82\xa0";
 my $__FILE__ = __FILE__;
 
 use Euhc;
-print "1..52\n";
+print "1..48\n";
 
 if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-    for my $tno (1..52) {
+    for my $tno (1..48) {
         print "ok - $tno # SKIP $^X $0\n";
     }
     exit;
@@ -258,131 +258,102 @@ else {
     print "not ok - 34 Euhc::c FILE == -c FILE $^X $__FILE__\n";
 }
 
-local $^W = 0;
-if (((Euhc::t 'file') ne '') == ((-t 'file') ne '')) {
-    print "ok - 35 Euhc::t 'file' == -t 'file' $^X $__FILE__\n";
-}
-else {
-    print "not ok - 35 Euhc::t 'file' == -t 'file' $^X $__FILE__\n";
-}
-
-if (((Euhc::t FILE) ne '') == ((-t FILE) ne '')) {
-    print "ok - 36 Euhc::t FILE == -t FILE $^X $__FILE__\n";
-}
-else {
-    print "not ok - 36 Euhc::t FILE == -t FILE $^X $__FILE__\n";
-}
-
 if (((Euhc::u 'file') ne '') == ((-u 'file') ne '')) {
-    print "ok - 37 Euhc::u 'file' == -u 'file' $^X $__FILE__\n";
+    print "ok - 35 Euhc::u 'file' == -u 'file' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 37 Euhc::u 'file' == -u 'file' $^X $__FILE__\n";
+    print "not ok - 35 Euhc::u 'file' == -u 'file' $^X $__FILE__\n";
 }
 
 if (((Euhc::u FILE) ne '') == ((-u FILE) ne '')) {
-    print "ok - 38 Euhc::u FILE == -u FILE $^X $__FILE__\n";
+    print "ok - 36 Euhc::u FILE == -u FILE $^X $__FILE__\n";
 }
 else {
-    print "not ok - 38 Euhc::u FILE == -u FILE $^X $__FILE__\n";
+    print "not ok - 36 Euhc::u FILE == -u FILE $^X $__FILE__\n";
 }
 
 if (((Euhc::g 'file') ne '') == ((-g 'file') ne '')) {
-    print "ok - 39 Euhc::g 'file' == -g 'file' $^X $__FILE__\n";
+    print "ok - 37 Euhc::g 'file' == -g 'file' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 39 Euhc::g 'file' == -g 'file' $^X $__FILE__\n";
+    print "not ok - 37 Euhc::g 'file' == -g 'file' $^X $__FILE__\n";
 }
 
 if (((Euhc::g FILE) ne '') == ((-g FILE) ne '')) {
-    print "ok - 40 Euhc::g FILE == -g FILE $^X $__FILE__\n";
+    print "ok - 38 Euhc::g FILE == -g FILE $^X $__FILE__\n";
 }
 else {
-    print "not ok - 40 Euhc::g FILE == -g FILE $^X $__FILE__\n";
-}
-
-if (((Euhc::k 'file') ne '') == ((-k 'file') ne '')) {
-    print "ok - 41 Euhc::k 'file' == -k 'file' $^X $__FILE__\n";
-}
-else {
-    print "not ok - 41 Euhc::k 'file' == -k 'file' $^X $__FILE__\n";
-}
-
-if (((Euhc::k FILE) ne '') == ((-k FILE) ne '')) {
-    print "ok - 42 Euhc::k FILE == -k FILE $^X $__FILE__\n";
-}
-else {
-    print "not ok - 42 Euhc::k FILE == -k FILE $^X $__FILE__\n";
+    print "not ok - 38 Euhc::g FILE == -g FILE $^X $__FILE__\n";
 }
 
 if (((Euhc::T 'file') ne '') == ((-T 'file') ne '')) {
-    print "ok - 43 Euhc::T 'file' == -T 'file' $^X $__FILE__\n";
+    print "ok - 39 Euhc::T 'file' == -T 'file' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 43 Euhc::T 'file' == -T 'file' $^X $__FILE__\n";
+    print "not ok - 39 Euhc::T 'file' == -T 'file' $^X $__FILE__\n";
 }
 
 if (((Euhc::T FILE) ne '') == ((-T FILE) ne '')) {
-    print "ok - 44 Euhc::T FILE == -T FILE $^X $__FILE__\n";
+    print "ok - 40 Euhc::T FILE == -T FILE $^X $__FILE__\n";
 }
 else {
-    print "not ok - 44 Euhc::T FILE == -T FILE $^X $__FILE__\n";
+    print "not ok - 40 Euhc::T FILE == -T FILE $^X $__FILE__\n";
 }
 
 if (((Euhc::B 'file') ne '') == ((-B 'file') ne '')) {
-    print "ok - 45 Euhc::B 'file' == -B 'file' $^X $__FILE__\n";
+    print "ok - 41 Euhc::B 'file' == -B 'file' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 45 Euhc::B 'file' == -B 'file' $^X $__FILE__\n";
+    print "not ok - 41 Euhc::B 'file' == -B 'file' $^X $__FILE__\n";
 }
 
 if (((Euhc::B FILE) ne '') == ((-B FILE) ne '')) {
-    print "ok - 46 Euhc::B FILE == -B FILE $^X $__FILE__\n";
+    print "ok - 42 Euhc::B FILE == -B FILE $^X $__FILE__\n";
 }
 else {
-    print "not ok - 46 Euhc::B FILE == -B FILE $^X $__FILE__\n";
+    print "not ok - 42 Euhc::B FILE == -B FILE $^X $__FILE__\n";
 }
 
 if (((Euhc::M 'file') ne '') == ((-M 'file') ne '')) {
-    print "ok - 47 Euhc::M 'file' == -M 'file' $^X $__FILE__\n";
+    print "ok - 43 Euhc::M 'file' == -M 'file' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 47 Euhc::M 'file' == -M 'file' $^X $__FILE__\n";
+    print "not ok - 43 Euhc::M 'file' == -M 'file' $^X $__FILE__\n";
 }
 
 if (((Euhc::M FILE) ne '') == ((-M FILE) ne '')) {
-    print "ok - 48 Euhc::M FILE == -M FILE $^X $__FILE__\n";
+    print "ok - 44 Euhc::M FILE == -M FILE $^X $__FILE__\n";
 }
 else {
-    print "not ok - 48 Euhc::M FILE == -M FILE $^X $__FILE__\n";
+    print "not ok - 44 Euhc::M FILE == -M FILE $^X $__FILE__\n";
 }
 
 if (((Euhc::A 'file') ne '') == ((-A 'file') ne '')) {
-    print "ok - 49 Euhc::A 'file' == -A 'file' $^X $__FILE__\n";
+    print "ok - 45 Euhc::A 'file' == -A 'file' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 49 Euhc::A 'file' == -A 'file' $^X $__FILE__\n";
+    print "not ok - 45 Euhc::A 'file' == -A 'file' $^X $__FILE__\n";
 }
 
 if (((Euhc::A FILE) ne '') == ((-A FILE) ne '')) {
-    print "ok - 50 Euhc::A FILE == -A FILE $^X $__FILE__\n";
+    print "ok - 46 Euhc::A FILE == -A FILE $^X $__FILE__\n";
 }
 else {
-    print "not ok - 50 Euhc::A FILE == -A FILE $^X $__FILE__\n";
+    print "not ok - 46 Euhc::A FILE == -A FILE $^X $__FILE__\n";
 }
 
 if (((Euhc::C 'file') ne '') == ((-C 'file') ne '')) {
-    print "ok - 51 Euhc::C 'file' == -C 'file' $^X $__FILE__\n";
+    print "ok - 47 Euhc::C 'file' == -C 'file' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 51 Euhc::C 'file' == -C 'file' $^X $__FILE__\n";
+    print "not ok - 47 Euhc::C 'file' == -C 'file' $^X $__FILE__\n";
 }
 
 if (((Euhc::C FILE) ne '') == ((-C FILE) ne '')) {
-    print "ok - 52 Euhc::C FILE == -C FILE $^X $__FILE__\n";
+    print "ok - 48 Euhc::C FILE == -C FILE $^X $__FILE__\n";
 }
 else {
-    print "not ok - 52 Euhc::C FILE == -C FILE $^X $__FILE__\n";
+    print "not ok - 48 Euhc::C FILE == -C FILE $^X $__FILE__\n";
 }
 
 close(FILE);

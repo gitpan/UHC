@@ -6,10 +6,10 @@ die "This file is not encoded in UHC.\n" if q{‚ } ne "\x82\xa0";
 my $__FILE__ = __FILE__;
 
 use Euhc;
-print "1..26\n";
+print "1..22\n";
 
 if ($^O !~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-    for my $tno (1..26) {
+    for my $tno (1..22) {
         print "ok - $tno # SKIP $^X $0\n";
     }
     exit;
@@ -138,68 +138,39 @@ else {
     print "not ok - 17 Euhc::c 'directory' == -c 'directory' $^X $__FILE__\n";
 }
 
-local $^W = 0;
-if (((Euhc::t 'directory') ne '') == ((-t 'directory') ne '')) {
-    print "ok - 18 Euhc::t 'directory' == -t 'directory' $^X $__FILE__\n";
-}
-else {
-    print "not ok - 18 Euhc::t 'directory' == -t 'directory' $^X $__FILE__\n";
-}
-
 if (((Euhc::u 'directory') ne '') == ((-u 'directory') ne '')) {
-    print "ok - 19 Euhc::u 'directory' == -u 'directory' $^X $__FILE__\n";
+    print "ok - 18 Euhc::u 'directory' == -u 'directory' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 19 Euhc::u 'directory' == -u 'directory' $^X $__FILE__\n";
+    print "not ok - 18 Euhc::u 'directory' == -u 'directory' $^X $__FILE__\n";
 }
 
 if (((Euhc::g 'directory') ne '') == ((-g 'directory') ne '')) {
-    print "ok - 20 Euhc::g 'directory' == -g 'directory' $^X $__FILE__\n";
+    print "ok - 19 Euhc::g 'directory' == -g 'directory' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 20 Euhc::g 'directory' == -g 'directory' $^X $__FILE__\n";
-}
-
-if (((Euhc::k 'directory') ne '') == ((-k 'directory') ne '')) {
-    print "ok - 21 Euhc::k 'directory' == -k 'directory' $^X $__FILE__\n";
-}
-else {
-    print "not ok - 21 Euhc::k 'directory' == -k 'directory' $^X $__FILE__\n";
-}
-
-if (((Euhc::T 'directory') ne '') == ((-T 'directory') ne '')) {
-    print "ok - 22 Euhc::T 'directory' == -T 'directory' $^X $__FILE__\n";
-}
-else {
-    print "not ok - 22 Euhc::T 'directory' == -T 'directory' $^X $__FILE__\n";
-}
-
-if (((Euhc::B 'directory') ne '') == ((-B 'directory') ne '')) {
-    print "ok - 23 Euhc::B 'directory' == -B 'directory' $^X $__FILE__\n";
-}
-else {
-    print "not ok - 23 Euhc::B 'directory' == -B 'directory' $^X $__FILE__\n";
+    print "not ok - 19 Euhc::g 'directory' == -g 'directory' $^X $__FILE__\n";
 }
 
 if (((Euhc::M 'directory') ne '') == ((-M 'directory') ne '')) {
-    print "ok - 24 Euhc::M 'directory' == -M 'directory' $^X $__FILE__\n";
+    print "ok - 20 Euhc::M 'directory' == -M 'directory' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 24 Euhc::M 'directory' == -M 'directory' $^X $__FILE__\n";
+    print "not ok - 20 Euhc::M 'directory' == -M 'directory' $^X $__FILE__\n";
 }
 
 if (((Euhc::A 'directory') ne '') == ((-A 'directory') ne '')) {
-    print "ok - 25 Euhc::A 'directory' == -A 'directory' $^X $__FILE__\n";
+    print "ok - 21 Euhc::A 'directory' == -A 'directory' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 25 Euhc::A 'directory' == -A 'directory' $^X $__FILE__\n";
+    print "not ok - 21 Euhc::A 'directory' == -A 'directory' $^X $__FILE__\n";
 }
 
 if (((Euhc::C 'directory') ne '') == ((-C 'directory') ne '')) {
-    print "ok - 26 Euhc::C 'directory' == -C 'directory' $^X $__FILE__\n";
+    print "ok - 22 Euhc::C 'directory' == -C 'directory' $^X $__FILE__\n";
 }
 else {
-    print "not ok - 26 Euhc::C 'directory' == -C 'directory' $^X $__FILE__\n";
+    print "not ok - 22 Euhc::C 'directory' == -C 'directory' $^X $__FILE__\n";
 }
 
 closedir(DIR);
